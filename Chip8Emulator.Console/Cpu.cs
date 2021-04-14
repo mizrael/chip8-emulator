@@ -9,7 +9,7 @@ namespace Chip8Emulator.Console
         private const int MEMORY_START = 0x200;         
         private readonly byte[] _memory = new byte[0x1000];        
         private readonly byte[] _v = new byte[16];
-        private readonly byte[] _stack = new byte[48];
+        private readonly ushort[] _stack = new ushort[16];
 
         private const int SCREEN_WIDTH = 64;
         private const int SCREEN_HEIGHT = 32;
@@ -22,6 +22,7 @@ namespace Chip8Emulator.Console
         private readonly Dictionary<byte, bool> _keyboard;
 
         private readonly Dictionary<byte, Action<OpCode>> _instructions = new();
+        private readonly Dictionary<byte, Action<OpCode>> _miscInstructions = new();
 
         public Cpu()
         {
@@ -29,10 +30,20 @@ namespace Chip8Emulator.Console
             for (byte i = 0; i < 16; i++)
                 _keyboard.Add(i, false);
 
+            _instructions[0x0] = this.ZeroOps;
             _instructions[0x1] = this.Jump;
+            _instructions[0x2] = this.Call;
+            _instructions[0x3] = this.SkipVxEqNN;
+            _instructions[0x4] = this.SkipVxNeqNN;
             _instructions[0x6] = this.SetVReg;
+            _instructions[0x7] = this.AddVReg;
+            _instructions[0x8] = this.XYOps;
             _instructions[0xA] = this.SetI;
             _instructions[0xD] = this.Draw;
+            _instructions[0xE] = this.SkipOnKey;
+            _instructions[0xF] = this.Misc;
+
+            _miscInstructions[0x1E] = this.AddVRegToI;
         }
 
         public async Task LoadAsync(System.IO.Stream romData)
@@ -57,11 +68,17 @@ namespace Chip8Emulator.Console
         public void Tick()
         {
             ushort data = (ushort)(_memory[_pc++] << 8 | _memory[_pc++]);
-            var opcode = new OpCode(data);
+            var opCode = new OpCode(data);
 
-            if (!_instructions.TryGetValue(opcode.Set, out var instruction))
-                throw new MethodAccessException($"instruction '{opcode.Set:X}' not implemented");
-            instruction(opcode);
+            if (!_instructions.TryGetValue(opCode.Set, out var instruction))
+                throw new NotImplementedException($"instruction '{opCode.Set:X}' not implemented");
+                
+            instruction(opCode);
+        }
+
+        public void Render(IRenderer renderer)
+        {
+            renderer.Render(_screen);
         }
 
         #region instructions
@@ -74,6 +91,11 @@ namespace Chip8Emulator.Console
         private void SetVReg(OpCode opCode)
         {
             _v[opCode.X] = opCode.NN;
+        }
+
+        private void AddVReg(OpCode opCode)
+        {
+            _v[opCode.X] += opCode.NN;
         }
 
         private void SetI(OpCode opCode)
@@ -122,14 +144,102 @@ namespace Chip8Emulator.Console
                     var oldPixel = _screen[px, py];
                     _screen[px, py] = !oldPixel;
 
-                    if (oldPixel) carry = 1;
+                    if (oldPixel) 
+                        carry = 1;
                 }                
             }
 
             _v[0xF] = carry;
         }
 
-        #endregion instructions
-    }
+        private void Misc(OpCode opCode){
+            if (!_miscInstructions.TryGetValue(opCode.NN, out var instruction))
+                throw new NotImplementedException($"instruction '0xF{opCode.NN:X}' not implemented");
+                
+            instruction(opCode);
+        }
 
+        private void SkipVxEqNN(OpCode opCode){
+            if(_v[opCode.X] == opCode.NN)
+                _pc+=2;
+        }
+        private void SkipVxNeqNN(OpCode opCode){
+            if(_v[opCode.X] != opCode.NN)
+                _pc+=2;
+        }
+
+        private void Call(OpCode opCode){
+            Push(_pc);
+            _pc = opCode.NNN;
+        }
+
+        void Push(ushort value) =>
+	        _stack[_sp++] = value;    
+
+        ushort Pop() => 
+	        _stack[--_sp];
+
+        private void ZeroOps(OpCode opCode){
+            switch(opCode.NN){
+                case 0xE0:
+                    Array.Clear(_screen, 0, _screen.Length); 
+                    break;
+                case 0xEE:
+                    _pc = Pop();
+                    break;
+                default:
+                    throw new NotImplementedException($"instruction '0x0{opCode.NN:X}' not implemented");
+            }
+        }
+
+        private void XYOps(OpCode opCode){
+            switch(opCode.N){
+                case 0x0:
+                    _v[opCode.X] = _v[opCode.Y];
+                    break;
+                case 0x1:
+                    _v[opCode.X] = (byte)(_v[opCode.X] | _v[opCode.Y]);
+                    break;
+                case 0x2:
+                    _v[opCode.X] = (byte)(_v[opCode.X] & _v[opCode.Y]);
+                    break;
+                case 0x3:
+                    _v[opCode.X] = (byte)(_v[opCode.X] ^ _v[opCode.Y]);
+                    break;
+                case 0x4:
+                    var res = _v[opCode.X] + _v[opCode.Y];
+                    var carry = res > 255;
+                    _v[opCode.X] = (byte)res;
+                    _v[0xF] = (byte)(carry ? 1 : 0);
+                    break;
+                default:
+                    throw new NotImplementedException($"instruction '0x8XY{opCode.N:X}' not implemented");
+            }
+        }
+
+        private void SkipOnKey(OpCode opCode){
+            switch(opCode.NN){
+                case 0x9E:
+                    if(_keyboard[_v[opCode.X]])
+                        _pc +=2;
+                    break;
+                case 0xA1:
+                    if(!_keyboard[_v[opCode.X]])
+                        _pc +=2;
+                    break;
+                default:
+                    throw new NotImplementedException($"instruction '0xEX{opCode.NN:X}' not implemented");
+            }
+        }
+
+        #endregion instructions
+
+        #region misc instructions
+
+        private void AddVRegToI(OpCode opCode){
+            _i += _v[opCode.X];
+        }
+
+        #endregion misc instructions
+    }
 }
