@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace Chip8Emulator.Console
+namespace Chip8Emulator.Core
 {
     public class Cpu
     {
@@ -47,6 +47,7 @@ namespace Chip8Emulator.Console
             _miscInstructions[0x1E] = this.AddVRegToI;
             _miscInstructions[0x65] = this.FillVFromMI;
             _miscInstructions[0x15] = this.SetDelay;
+            _miscInstructions[0x7] = this.GetDelay;
         }
 
         public async Task LoadAsync(System.IO.Stream romData)
@@ -123,31 +124,25 @@ namespace Chip8Emulator.Console
         {
             var startX = opCode.X;
             var startY = opCode.Y;
-            var rows = opCode.N + 1;
+            var rows = opCode.N;
             byte carry = 0;
 
-            for(byte row = 0; row != rows; row++)
+            for(byte row = 0; row < rows; row++)
             {
                 byte rowData = _memory[_i + row];
-                if (0 == rowData)
-                    continue;
-
                 int py = (startY + row) % SCREEN_HEIGHT;
 
-                for (byte x = 0; x != 8; x++)
+                for (byte col = 0; col != 8; col++)
                 {
-                    byte bit = (byte)(rowData & 0xF000);
-                    rowData <<= 1; 
+                    int px = (startX + col) % SCREEN_WIDTH;                   
+                    byte oldPixel = (byte)(_screen[px, py] ? 1 : 0);
+                    byte spritePixel = (byte)((rowData >> (7 - col)) & 1);
+                    rowData <<= 1;
+
+                    byte newPixel = (byte)(oldPixel ^ spritePixel);
+                    _screen[px,py] = (newPixel != 0);
                     
-                    if (bit == 0)
-                        continue;
-
-                    int px = (startX + x) % SCREEN_WIDTH;                   
-
-                    var oldPixel = _screen[px, py];
-                    _screen[px, py] = !oldPixel;
-
-                    if (oldPixel) 
+                    if(oldPixel == 1 && spritePixel == 0)
                         carry = 1;
                 }                
             }
@@ -250,6 +245,10 @@ namespace Chip8Emulator.Console
 
         private void SetDelay(OpCode opCode){
             _delay = _v[opCode.X];
+        }
+
+        private void GetDelay(OpCode opCode){
+            _v[opCode.X] = _delay;
         }
 
         #endregion misc instructions

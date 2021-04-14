@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Chip8Emulator.Core;
 
 namespace Chip8Emulator.Console
 {
@@ -17,10 +18,11 @@ namespace Chip8Emulator.Console
 
             var hertz = 60;
             var clock = TimeSpan.FromSeconds(1f / hertz);
-
+            
             while (true)
             {
                 cpu.Tick();
+
                 await Task.Delay(clock);
             }                
 

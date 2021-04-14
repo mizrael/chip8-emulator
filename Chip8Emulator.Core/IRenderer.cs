@@ -1,4 +1,4 @@
-namespace Chip8Emulator.Console
+namespace Chip8Emulator.Core
 {
     public interface IRenderer
     {
