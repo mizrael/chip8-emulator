@@ -10,7 +10,10 @@ namespace Chip8Emulator.Console
         private readonly byte[] _memory = new byte[0x1000];        
         private readonly byte[] _v = new byte[16];
         private readonly byte[] _stack = new byte[48];
-        private readonly bool[,] _screen = new bool[64, 32];
+
+        private const int SCREEN_WIDTH = 64;
+        private const int SCREEN_HEIGHT = 32;
+        private readonly bool[,] _screen = new bool[SCREEN_WIDTH, SCREEN_HEIGHT];
 
         private ushort _pc = MEMORY_START;
         private ushort _i = 0;
@@ -78,9 +81,52 @@ namespace Chip8Emulator.Console
             _i = opCode.NNN;
         }
 
+        /// <summary>
+        /// Draws a sprite at coordinate (VX, VY) that has a width of 8 pixels 
+        /// and a height of N+1 pixels. Each row of 8 pixels is read as 
+        /// bit-coded starting from memory location I; 
+        /// I value doesn’t change after the execution of this instruction. 
+        /// https://en.wikipedia.org/wiki/CHIP-8#Opcode_table
+        /// Sprite pixels are XOR'd with corresponding screen pixels. 
+        /// In other words, sprite pixels that are set flip the color of the 
+        /// corresponding screen pixel, while unset sprite pixels do nothing. 
+        /// The carry flag (VF) is set to 1 if any screen pixels are flipped 
+        /// from set to unset when a sprite is drawn and set to 0 otherwise. 
+        /// </summary>
+        /// <param name="opCode"></param>
         private void Draw(OpCode opCode)
         {
-            _i = opCode.NNN;
+            var startX = opCode.X;
+            var startY = opCode.Y;
+            var rows = opCode.N + 1;
+            byte carry = 0;
+
+            for(byte row = 0; row != rows; row++)
+            {
+                byte rowData = _memory[_i + row];
+                if (0 == rowData)
+                    continue;
+
+                int py = (startY + row) % SCREEN_HEIGHT;
+
+                for (byte x = 0; x != 8; x++)
+                {
+                    byte bit = (byte)(rowData & 0xF000);
+                    rowData <<= 1; 
+                    
+                    if (bit == 0)
+                        continue;
+
+                    int px = (startX + x) % SCREEN_WIDTH;                   
+
+                    var oldPixel = _screen[px, py];
+                    _screen[px, py] = !oldPixel;
+
+                    if (oldPixel) carry = 1;
+                }                
+            }
+
+            _v[0xF] = carry;
         }
 
         #endregion instructions
