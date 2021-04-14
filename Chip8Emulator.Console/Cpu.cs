@@ -17,7 +17,8 @@ namespace Chip8Emulator.Console
 
         private ushort _pc = MEMORY_START;
         private ushort _i = 0;
-        private byte _sp = 0;       
+        private byte _sp = 0; 
+        private byte _delay = 0;       
 
         private readonly Dictionary<byte, bool> _keyboard;
 
@@ -44,6 +45,8 @@ namespace Chip8Emulator.Console
             _instructions[0xF] = this.Misc;
 
             _miscInstructions[0x1E] = this.AddVRegToI;
+            _miscInstructions[0x65] = this.FillVFromMI;
+            _miscInstructions[0x15] = this.SetDelay;
         }
 
         public async Task LoadAsync(System.IO.Stream romData)
@@ -238,6 +241,15 @@ namespace Chip8Emulator.Console
 
         private void AddVRegToI(OpCode opCode){
             _i += _v[opCode.X];
+        }
+
+        private void FillVFromMI(OpCode opCode){
+            for(int i=0;i!=opCode.X;++i)
+                _v[i] = _memory[_i+i];
+        }
+
+        private void SetDelay(OpCode opCode){
+            _delay = _v[opCode.X];
         }
 
         #endregion misc instructions
