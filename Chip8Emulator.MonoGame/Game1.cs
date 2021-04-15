@@ -26,6 +26,12 @@ namespace Chip8Emulator.MonoGame
         protected override void Initialize()
         { 
             base.Initialize();
+            this.Window.KeyDown += Window_KeyDown;            
+        }
+
+        private void Window_KeyDown(object sender, InputKeyEventArgs e)
+        {
+            throw new System.NotImplementedException();
         }
 
         protected override void LoadContent()
@@ -44,8 +50,8 @@ namespace Chip8Emulator.MonoGame
 
         protected override void Update(GameTime gameTime)
         {
-            if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
-                Exit();
+            //if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Microsoft.Xna.Framework.Input.Keys.Escape))
+            //    Exit();
 
             _cpu.Tick();
             

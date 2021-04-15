@@ -18,8 +18,9 @@ namespace Chip8Emulator.Core
         private ushort _pc = MEMORY_START;
         private ushort _i = 0;
         private byte _sp = 0; 
-        private byte _delay = 0;       
+        private byte _delay = 0;
 
+        private Keys _lastKeyPressed = Keys.None;
         private readonly Dictionary<byte, bool> _keyboard;
 
         private readonly Dictionary<byte, Action<OpCode>> _instructions = new();
@@ -47,7 +48,8 @@ namespace Chip8Emulator.Core
             _miscInstructions[0x1E] = this.AddVRegToI;
             _miscInstructions[0x65] = this.FillVFromMI;
             _miscInstructions[0x15] = this.SetDelay;
-            _miscInstructions[0x7] = this.GetDelay;
+            _miscInstructions[0x07] = this.GetDelay;
+            _miscInstructions[0x0A] = this.WaitKey;            
         }
 
         public async Task LoadAsync(System.IO.Stream romData)
@@ -83,6 +85,18 @@ namespace Chip8Emulator.Core
         public void Render(IRenderer renderer)
         {
             renderer.Update(_screen);
+        }
+
+        public void SetKeyDown(Keys key)
+        {
+            _lastKeyPressed = key;
+            _keyboard[(byte)key] = true;
+        }
+
+        public void SetKeyUp(Keys key)
+        {
+            _lastKeyPressed = Keys.None;
+            _keyboard[(byte)key] = false;
         }
 
         #region instructions
@@ -246,7 +260,6 @@ namespace Chip8Emulator.Core
 
         #region misc instructions
 
-
         //0xFX1E
         private void AddVRegToI(OpCode opCode){
             _i += _v[opCode.X];
@@ -262,10 +275,41 @@ namespace Chip8Emulator.Core
             _delay = _v[opCode.X];
         }
 
+        //0xFX07
         private void GetDelay(OpCode opCode){
             _v[opCode.X] = _delay;
         }
 
+        //0xFX0A
+        private void WaitKey(OpCode opCode)
+        {
+            if (_lastKeyPressed == Keys.None)
+                _pc -= 2;
+            else
+                _v[opCode.X] = (byte)_lastKeyPressed;
+        }
+
         #endregion misc instructions
+    }
+
+    public enum Keys
+    {
+        None,
+        Number0 = 0x0,
+        Number1 = 0x1,
+        Number2 = 0x2,
+        Number3 = 0x3,
+        Q = 0x4,
+        W = 0x5,
+        E = 0x6,
+        A = 0x7,
+        S = 0x8,
+        D = 0x9,
+        Z = 0xA,
+        X = 0xB,
+        C = 0xC,
+        Enter = 0xD,
+        Space = 0xE,
+        Esc = 0xF
     }
 }
