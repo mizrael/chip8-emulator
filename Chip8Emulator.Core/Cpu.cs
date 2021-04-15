@@ -11,8 +11,8 @@ namespace Chip8Emulator.Core
         private readonly byte[] _v = new byte[16];
         private readonly ushort[] _stack = new ushort[16];
 
-        private const int SCREEN_WIDTH = 64;
-        private const int SCREEN_HEIGHT = 32;
+        public const int SCREEN_WIDTH = 64;
+        public const int SCREEN_HEIGHT = 32;
         private readonly bool[,] _screen = new bool[SCREEN_WIDTH, SCREEN_HEIGHT];
 
         private ushort _pc = MEMORY_START;
@@ -82,7 +82,7 @@ namespace Chip8Emulator.Core
 
         public void Render(IRenderer renderer)
         {
-            renderer.Render(_screen);
+            renderer.Update(_screen);
         }
 
         #region instructions
@@ -99,7 +99,12 @@ namespace Chip8Emulator.Core
 
         private void AddVReg(OpCode opCode)
         {
-            _v[opCode.X] += opCode.NN;
+            int result = _v[opCode.X] + opCode.NN;
+            bool carry = result > 255;
+            if (carry)
+                result = result - 256;
+            
+            _v[opCode.X] = (byte)(result & 0x00FF);
         }
 
         private void SetI(OpCode opCode)
@@ -134,16 +139,25 @@ namespace Chip8Emulator.Core
 
                 for (byte col = 0; col != 8; col++)
                 {
-                    int px = (startX + col) % SCREEN_WIDTH;                   
-                    byte oldPixel = (byte)(_screen[px, py] ? 1 : 0);
-                    byte spritePixel = (byte)((rowData >> (7 - col)) & 1);
-                    rowData <<= 1;
-
-                    byte newPixel = (byte)(oldPixel ^ spritePixel);
-                    _screen[px,py] = (newPixel != 0);
+                    byte spritePixel = (byte)(rowData & (0x80 >> col));
+                    if (spritePixel == 0)
+                        continue;
                     
-                    if(oldPixel == 1 && spritePixel == 0)
+                    int px = (startX + col) % SCREEN_WIDTH;            
+                    byte oldPixel = (byte)(_screen[px, py] ? 1 : 0);
+                    if (oldPixel != 0)
                         carry = 1;
+
+                    _screen[px, py] ^= true;
+
+                    // byte oldPixel = (byte)(_screen[px, py] ? 1 : 0);
+                    // byte spritePixel = (byte)((rowData >> (7 - col)) & 1);
+                    //
+                    // byte newPixel = (byte)(oldPixel ^ spritePixel);
+                    // _screen[px,py] = (newPixel != 0);
+                    //
+                    // if(oldPixel == 1 && spritePixel == 0)
+                    //     carry = 1;
                 }                
             }
 
@@ -239,7 +253,7 @@ namespace Chip8Emulator.Core
         }
 
         private void FillVFromMI(OpCode opCode){
-            for(int i=0;i!=opCode.X;++i)
+            for(byte i=0;i<opCode.X;++i)
                 _v[i] = _memory[_i+i];
         }
 
