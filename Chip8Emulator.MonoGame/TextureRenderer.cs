@@ -18,15 +18,15 @@ namespace Chip8Emulator.MonoGame
             _pixels = new Color[Cpu.SCREEN_WIDTH * Cpu.SCREEN_HEIGHT];
             _texture = new Texture2D(graphicsDevice, Cpu.SCREEN_WIDTH, Cpu.SCREEN_HEIGHT, false, SurfaceFormat.Color);
         }
-        
+
         public void Update(bool[,] screen)
         {
-            int index = 0;
-            for(int row=0;row!=Cpu.SCREEN_HEIGHT;row++)
             for (int col = 0; col != Cpu.SCREEN_WIDTH; col++)
-            {
-                _pixels[index++] = screen[col, row] ? Color.White : Color.Black;
-            }
+                for (int row = 0; row != Cpu.SCREEN_HEIGHT; row++)
+                {
+                    int index = row * Cpu.SCREEN_WIDTH + col;
+                    _pixels[index] = screen[col, row] ? Color.White : Color.Black;
+                }
 
             _texture.SetData(_pixels);
         }
