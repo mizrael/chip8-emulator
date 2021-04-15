@@ -56,13 +56,9 @@ namespace Chip8Emulator.MonoGame
 
         protected override void Draw(GameTime gameTime)
         {
-            GraphicsDevice.Clear(Color.CornflowerBlue);
+            GraphicsDevice.Clear(Color.CornflowerBlue);                       
             
-            _spriteBatch.Begin();
-
             _renderer.Render();
-          
-            _spriteBatch.End();
 
             base.Draw(gameTime);
         }

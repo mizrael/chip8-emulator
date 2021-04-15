@@ -33,9 +33,14 @@ namespace Chip8Emulator.MonoGame
 
         public void Render()
         {
+            _spriteBatch.Begin(samplerState: new SamplerState()
+            {
+                Filter = TextureFilter.Point
+            });
+
             _spriteBatch.Draw(_texture, _graphicsDevice.Viewport.Bounds, Color.White);
-            // _spriteBatch.Draw(_texture, Vector2.Zero, null, Color.White, 0f, 
-            //     Vector2.Zero, this.Scale, SpriteEffects.None, 0);
+
+            _spriteBatch.End();
         }
 
         public Vector2 Scale { get; set; } = new Vector2(4, 4);
