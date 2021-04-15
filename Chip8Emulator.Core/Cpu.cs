@@ -87,16 +87,19 @@ namespace Chip8Emulator.Core
 
         #region instructions
 
+        // 0x1NNN
         private void Jump(OpCode opCode)
         {
             _pc = opCode.NNN; 
         }
 
+        // 0x6XNN
         private void SetVReg(OpCode opCode)
         {
             _v[opCode.X] = opCode.NN;
         }
 
+        // 0x7XNN
         private void AddVReg(OpCode opCode)
         {
             int result = _v[opCode.X] + opCode.NN;
@@ -107,6 +110,7 @@ namespace Chip8Emulator.Core
             _v[opCode.X] = (byte)(result & 0x00FF);
         }
 
+        // 0xANNN
         private void SetI(OpCode opCode)
         {
             _i = opCode.NNN;
@@ -173,15 +177,19 @@ namespace Chip8Emulator.Core
             instruction(opCode);
         }
 
+        // 0x3XNN
         private void SkipVxEqNN(OpCode opCode){
             if(_v[opCode.X] == opCode.NN)
                 _pc+=2;
         }
+
+        // 0x4XNN
         private void SkipVxNeqNN(OpCode opCode){
             if(_v[opCode.X] != opCode.NN)
                 _pc+=2;
         }
 
+        // 0x2NNN
         private void Call(OpCode opCode){
             Push(_pc);
             _pc = opCode.NNN;
@@ -212,13 +220,13 @@ namespace Chip8Emulator.Core
                     _v[opCode.X] = _v[opCode.Y];
                     break;
                 case 0x1:
-                    _v[opCode.X] = (byte)(_v[opCode.X] | _v[opCode.Y]);
+                    _v[opCode.X] |= _v[opCode.Y]; 
                     break;
                 case 0x2:
-                    _v[opCode.X] = (byte)(_v[opCode.X] & _v[opCode.Y]);
+                    _v[opCode.X] &= _v[opCode.Y];
                     break;
                 case 0x3:
-                    _v[opCode.X] = (byte)(_v[opCode.X] ^ _v[opCode.Y]);
+                    _v[opCode.X] ^= _v[opCode.Y];
                     break;
                 case 0x4:
                     var res = _v[opCode.X] + _v[opCode.Y];
@@ -250,12 +258,15 @@ namespace Chip8Emulator.Core
 
         #region misc instructions
 
+
+        //0xFX1E
         private void AddVRegToI(OpCode opCode){
             _i += _v[opCode.X];
         }
 
+        //0xFX65
         private void FillVFromMI(OpCode opCode){
-            for(byte i=0;i<opCode.X;++i)
+            for(byte i=0;i<=opCode.X;++i)
                 _v[i] = _memory[_i+i];
         }
 
