@@ -131,8 +131,8 @@ namespace Chip8Emulator.Core
         /// <param name="opCode"></param>
         private void Draw(OpCode opCode)
         {
-            var startX = opCode.X;
-            var startY = opCode.Y;
+            var startX = _v[opCode.X];
+            var startY = _v[opCode.Y];
             var rows = opCode.N;
             byte carry = 0;
 
@@ -143,26 +143,14 @@ namespace Chip8Emulator.Core
 
                 for (byte col = 0; col != 8; col++)
                 {
-                    // byte spritePixel = (byte)(rowData & (0x80 >> col));
-                    // int px = (startX + col) % SCREEN_WIDTH;            
-                    // byte oldPixel = (byte)(_screen[px, py] ? 1 : 0);
-                    // if (oldPixel == 1 && spritePixel == 1)
-                    // {
-                    //     _screen[px, py] = false;
-                    //     carry = 1;
-                    // } else if (oldPixel == 0 && spritePixel == 1)
-                    // {
-                    //     _screen[px, py] = true;
-                    // }
-
-                    int px = (startX + col) % SCREEN_WIDTH; 
+                    int px = (startX + col) % SCREEN_WIDTH;
                     byte oldPixel = (byte)(_screen[px, py] ? 1 : 0);
                     byte spritePixel = (byte)((rowData >> (7 - col)) & 1);
-                    
+
                     byte newPixel = (byte)(oldPixel ^ spritePixel);
-                    _screen[px,py] = (newPixel != 0);
-                    
-                    if(oldPixel == 1 && spritePixel == 1)
+                    _screen[px, py] = (newPixel != 0);
+
+                    if (oldPixel == 1 && spritePixel == 1)
                         carry = 1;
                 }                
             }
