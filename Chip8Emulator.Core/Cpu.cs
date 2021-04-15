@@ -139,25 +139,27 @@ namespace Chip8Emulator.Core
 
                 for (byte col = 0; col != 8; col++)
                 {
-                    byte spritePixel = (byte)(rowData & (0x80 >> col));
-                    if (spritePixel == 0)
-                        continue;
-                    
-                    int px = (startX + col) % SCREEN_WIDTH;            
-                    byte oldPixel = (byte)(_screen[px, py] ? 1 : 0);
-                    if (oldPixel != 0)
-                        carry = 1;
-
-                    _screen[px, py] ^= true;
-
+                    // byte spritePixel = (byte)(rowData & (0x80 >> col));
+                    // int px = (startX + col) % SCREEN_WIDTH;            
                     // byte oldPixel = (byte)(_screen[px, py] ? 1 : 0);
-                    // byte spritePixel = (byte)((rowData >> (7 - col)) & 1);
-                    //
-                    // byte newPixel = (byte)(oldPixel ^ spritePixel);
-                    // _screen[px,py] = (newPixel != 0);
-                    //
-                    // if(oldPixel == 1 && spritePixel == 0)
+                    // if (oldPixel == 1 && spritePixel == 1)
+                    // {
+                    //     _screen[px, py] = false;
                     //     carry = 1;
+                    // } else if (oldPixel == 0 && spritePixel == 1)
+                    // {
+                    //     _screen[px, py] = true;
+                    // }
+
+                    int px = (startX + col) % SCREEN_WIDTH; 
+                    byte oldPixel = (byte)(_screen[px, py] ? 1 : 0);
+                    byte spritePixel = (byte)((rowData >> (7 - col)) & 1);
+                    
+                    byte newPixel = (byte)(oldPixel ^ spritePixel);
+                    _screen[px,py] = (newPixel != 0);
+                    
+                    if(oldPixel == 1 && spritePixel == 1)
+                        carry = 1;
                 }                
             }
 
