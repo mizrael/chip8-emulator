@@ -1,5 +1,5 @@
 solutionName="Chip8Emulator"
-projectName="Chip8Emulator.Blazor"
+projectName="Chip8Emulator.BlazorWasm"
 projectFile="$projectName/$projectName.csproj"
 
 rm -rf ./build
@@ -12,5 +12,3 @@ mv -v $buildPath/wwwroot/* $buildPath/wwwroot/.* ./build
 rm -rf $buildPath
 
 sed -i -e "s/<base href=\"\/\" \/>/<base href=\"\/$solutionName\/\" \/>/g" ./build/index.html
-
-cp readme.md build/readme.md
