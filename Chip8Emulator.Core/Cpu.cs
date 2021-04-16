@@ -40,6 +40,7 @@ namespace Chip8Emulator.Core
             _instructions[0x6] = this.SetVReg;
             _instructions[0x7] = this.AddVReg;
             _instructions[0x8] = this.XYOps;
+            _instructions[0x9] = this.SkipVxNeqVy;
             _instructions[0xA] = this.SetI;
             _instructions[0xC] = this.Rand;
             _instructions[0xD] = this.Draw;
@@ -154,6 +155,7 @@ namespace Chip8Emulator.Core
             var startY = _v[opCode.Y];
             var rows = opCode.N;
             byte carry = 0;
+            bool updateRenderer = false;
 
             for(byte row = 0; row < rows; row++)
             {
@@ -167,6 +169,10 @@ namespace Chip8Emulator.Core
                     byte spritePixel = (byte)((rowData >> (7 - col)) & 1);
 
                     byte newPixel = (byte)(oldPixel ^ spritePixel);
+
+                    if (oldPixel != spritePixel)
+                        updateRenderer = true;
+
                     _screen[px, py] = (newPixel != 0);
 
                     if (oldPixel == 1 && spritePixel == 1)
@@ -176,7 +182,8 @@ namespace Chip8Emulator.Core
 
             _v[0xF] = carry;
             
-            _renderer.Update(_screen);
+            if(updateRenderer)
+                _renderer.Update(_screen);
         }
 
         private void Misc(OpCode opCode){
@@ -196,6 +203,13 @@ namespace Chip8Emulator.Core
         private void SkipVxNeqNN(OpCode opCode){
             if(_v[opCode.X] != opCode.NN)
                 _pc+=2;
+        }
+
+        // 0x9XY0
+        private void SkipVxNeqVy(OpCode opCode)
+        {
+            if (_v[opCode.X] != _v[opCode.Y])
+                _pc += 2;
         }
 
         // 0x2NNN
@@ -246,6 +260,14 @@ namespace Chip8Emulator.Core
                 case 0x5:
                     _v[0xF] = (byte)(_v[opCode.X] > _v[opCode.Y] ? 1 : 0);
                     _v[opCode.X] -= _v[opCode.Y];
+                    break;
+                case 0x6:
+                    _v[0xF] = (byte)((_v[opCode.X] & 0x1) == 1 ? 1 : 0);
+                    _v[opCode.X] >>= 1;
+                    break;
+                case 0x7:
+                    _v[0xF] = (byte)(_v[opCode.Y] > _v[opCode.X] ? 1 : 0);
+                    _v[opCode.X] = (byte)(_v[opCode.Y] - _v[opCode.X]);
                     break;
                 default:
                     throw new NotImplementedException($"instruction '0x8XY{opCode.N:X}' not implemented");

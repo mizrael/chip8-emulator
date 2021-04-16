@@ -27,7 +27,7 @@ namespace Chip8Emulator.MonoGame
             { MonoKeys.R, Keys.D },
             { MonoKeys.A, Keys.Number7 },
             { MonoKeys.S, Keys.Number8 },
-            { MonoKeys.D, Keys.Number8 },
+            { MonoKeys.D, Keys.Number9 },
             { MonoKeys.F, Keys.E },
             { MonoKeys.Z, Keys.A },
             { MonoKeys.X, Keys.Number0 },
@@ -68,7 +68,7 @@ namespace Chip8Emulator.MonoGame
             _renderer = new TextureRenderer(this.GraphicsDevice, _spriteBatch);
             _cpu = new Cpu(_renderer, new DefaultSoundPlayer());
 
-            var romPath = "Content/roms/PONG";
+            var romPath = "Content/roms/TETRIS";
             using (var romData = System.IO.File.OpenRead(romPath))
             {
                 _cpu.LoadAsync(romData).Wait();
