@@ -1,0 +1,64 @@
+﻿@page "/"
+@using Blazor.Extensions
+@using Blazor.Extensions.Canvas.Canvas2D
+
+@inject IJSRuntime JsRuntime;
+@inject HttpClient HttpClient;
+
+<div id="canvas-container">
+    <BECanvas Width="@_canvasWidth" Height="@_canvasHeight" @ref="_canvasReference"></BECanvas>
+</div>
+
+@code{
+    BECanvasComponent _canvasReference = null;
+    Canvas2DContext _outputCanvasContext;
+
+    int _canvasWidth = 800;
+    int _canvasHeight = 400;
+
+    Chip8Emulator.Core.Cpu _cpu;
+    Chip8Emulator.Core.IRenderer _renderer;
+
+    bool[,] _currFrame;
+
+    private async Task RenderFrame()
+    {
+        if (null == _currFrame) return;
+        var spriteWidth = _canvasWidth / Chip8Emulator.Core.Cpu.SCREEN_WIDTH;
+        var spriteHeight = _canvasHeight / Chip8Emulator.Core.Cpu.SCREEN_HEIGHT;
+
+        for (int col = 0; col != Chip8Emulator.Core.Cpu.SCREEN_WIDTH; col++)
+            for (int row = 0; row != Chip8Emulator.Core.Cpu.SCREEN_HEIGHT; row++)
+            {
+                if (!_currFrame[col, row])
+                    continue;
+
+                await _outputCanvasContext.SetFillStyleAsync("green");
+                await _outputCanvasContext.FillRectAsync(col * spriteWidth, row* spriteHeight, spriteWidth, spriteHeight);
+            }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+            return;
+
+        _renderer = new Chip8Emulator.Core.LambdaRenderer(data => _currFrame = data, ()=> RenderFrame());
+        _cpu = new Core.Cpu(_renderer, new Chip8Emulator.Core.DefaultSoundPlayer());
+
+        var romData = await HttpClient.GetStreamAsync("/roms/PONG");
+        await _cpu.LoadAsync(romData);
+
+        _outputCanvasContext = await _canvasReference.CreateCanvas2DAsync();
+        await JsRuntime.InvokeAsync<object>("initGame", DotNetObjectReference.Create(this));
+    }
+
+    [JSInvokable]
+    public async ValueTask GameLoop(float timeStamp)
+    {
+        _cpu.Tick();
+
+        await _outputCanvasContext.ClearRectAsync(0, 0, _canvasWidth, _canvasHeight);
+        _renderer.Render();
+    }
+}

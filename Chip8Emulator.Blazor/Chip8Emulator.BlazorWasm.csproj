@@ -1,0 +1,116 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
+
+  <PropertyGroup>
+    <TargetFramework>net5.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Content Remove="wwwroot\roms\15PUZZLE" />
+    <Content Remove="wwwroot\roms\BLINKY" />
+    <Content Remove="wwwroot\roms\BLITZ" />
+    <Content Remove="wwwroot\roms\BRIX" />
+    <Content Remove="wwwroot\roms\CONNECT4" />
+    <Content Remove="wwwroot\roms\GUESS" />
+    <Content Remove="wwwroot\roms\HIDDEN" />
+    <Content Remove="wwwroot\roms\INVADERS" />
+    <Content Remove="wwwroot\roms\KALEID" />
+    <Content Remove="wwwroot\roms\MAZE" />
+    <Content Remove="wwwroot\roms\MERLIN" />
+    <Content Remove="wwwroot\roms\MISSILE" />
+    <Content Remove="wwwroot\roms\PONG" />
+    <Content Remove="wwwroot\roms\PONG2" />
+    <Content Remove="wwwroot\roms\PUZZLE" />
+    <Content Remove="wwwroot\roms\SYZYGY" />
+    <Content Remove="wwwroot\roms\TANK" />
+    <Content Remove="wwwroot\roms\TETRIS" />
+    <Content Remove="wwwroot\roms\TICTAC" />
+    <Content Remove="wwwroot\roms\UFO" />
+    <Content Remove="wwwroot\roms\VBRIX" />
+    <Content Remove="wwwroot\roms\VERS" />
+    <Content Remove="wwwroot\roms\WIPEOFF" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="5.0.5" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="5.0.5" PrivateAssets="all" />
+    <PackageReference Include="System.Net.Http.Json" Version="5.0.0" />
+    <PackageReference Include="Blazor.Extensions.Canvas" Version="1.1.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Chip8Emulator.Core\Chip8Emulator.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="wwwroot\roms\15PUZZLE">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="wwwroot\roms\BLINKY">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="wwwroot\roms\BLITZ">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="wwwroot\roms\BRIX">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="wwwroot\roms\CONNECT4">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="wwwroot\roms\GUESS">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="wwwroot\roms\HIDDEN">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="wwwroot\roms\INVADERS">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="wwwroot\roms\KALEID">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="wwwroot\roms\MAZE">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="wwwroot\roms\MERLIN">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="wwwroot\roms\MISSILE">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="wwwroot\roms\PONG">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="wwwroot\roms\PONG2">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="wwwroot\roms\PUZZLE">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="wwwroot\roms\SYZYGY">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="wwwroot\roms\TANK">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="wwwroot\roms\TETRIS">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="wwwroot\roms\TICTAC">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="wwwroot\roms\UFO">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="wwwroot\roms\VBRIX">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="wwwroot\roms\VERS">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="wwwroot\roms\WIPEOFF">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+</Project>
