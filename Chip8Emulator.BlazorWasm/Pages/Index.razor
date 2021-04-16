@@ -65,7 +65,7 @@
         _renderer = new Chip8Emulator.Core.LambdaRenderer(data => _currFrame = data, ()=> RenderFrame());
         _cpu = new Core.Cpu(_renderer, new Chip8Emulator.Core.DefaultSoundPlayer());
 
-        var romData = await HttpClient.GetStreamAsync("/roms/PONG");
+        var romData = await HttpClient.GetStreamAsync("roms/PONG");
         await _cpu.LoadAsync(romData);
 
         _outputCanvasContext = await _canvasReference.CreateCanvas2DAsync();

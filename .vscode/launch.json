@@ -5,7 +5,7 @@
             "name": "Launch Blazor WASM",
             "type": "blazorwasm",
             "request": "launch",
-            "cwd": "${workspaceFolder}/Chip8Emulator.Blazor"
+            "cwd": "${workspaceFolder}/Chip8Emulator.BlazorWasm"
         },
         {
             // Use IntelliSense to find out which attributes exist for C# debugging
