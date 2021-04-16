@@ -25,11 +25,16 @@
     <script>
         function gameLoop(timeStamp) {
             window.requestAnimationFrame(gameLoop);
-            theInstance.invokeMethodAsync('GameLoop', timeStamp);
+            game.instance.invokeMethodAsync('GameLoop', timeStamp, game.canvas.width, game.canvas.height);
         }
 
         window.initGame = (instance) => {
-            window.theInstance = instance;
+            var canvasContainer = document.getElementById('canvas-container'),
+                canvases = canvasContainer.getElementsByTagName('canvas') || [];
+            window.game = {
+                instance: instance,
+                canvas: canvases.length ? canvases[0] : null
+            };
             window.requestAnimationFrame(gameLoop);
         };
     </script>

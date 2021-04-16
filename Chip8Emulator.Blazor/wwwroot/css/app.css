@@ -55,3 +55,8 @@ a, .btn-link {
     display:inline-block;
     background: #000000;
 }
+
+    #canvas-container canvas {
+        width: 100%;
+        height: 100%;
+    }

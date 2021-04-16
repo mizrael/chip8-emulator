@@ -54,8 +54,11 @@
     }
 
     [JSInvokable]
-    public async ValueTask GameLoop(float timeStamp)
+    public async ValueTask GameLoop(float timeStamp, int width, int height)
     {
+        _canvasWidth = width;
+        _canvasHeight = height;
+
         _cpu.Tick();
 
         await _outputCanvasContext.ClearRectAsync(0, 0, _canvasWidth, _canvasHeight);
