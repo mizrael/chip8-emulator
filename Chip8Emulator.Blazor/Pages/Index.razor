@@ -16,10 +16,29 @@
     int _canvasWidth = 800;
     int _canvasHeight = 400;
 
-    Chip8Emulator.Core.Cpu _cpu;
-    Chip8Emulator.Core.IRenderer _renderer;
+    Core.Cpu _cpu;
+    Core.IRenderer _renderer;
 
     bool[,] _currFrame;
+
+    private readonly Dictionary<int, Core.Keys> _keyMappings = new Dictionary<int, Core.Keys>() {
+            { 49, Core.Keys.Number1 }, // 1
+            { 50, Core.Keys.Number2 }, // 2
+            { 51, Core.Keys.Number3 }, // 3
+            { 52, Core.Keys.C }, // 4
+            { 81, Core.Keys.Number4 }, // q
+            { 87, Core.Keys.Number5 }, // w
+            { 69, Core.Keys.Number6 }, // e
+            { 82, Core.Keys.D }, // r
+            { 65, Core.Keys.Number7 }, // a
+            { 83, Core.Keys.Number8 }, // s
+            { 68, Core.Keys.Number9 }, // d
+            { 70, Core.Keys.E }, // f
+            { 90, Core.Keys.A }, // z
+            { 88, Core.Keys.Number0 }, // x
+            { 67, Core.Keys.B }, // c
+            { 86, Core.Keys.F } // v
+        };
 
     private async Task RenderFrame()
     {
@@ -63,5 +82,17 @@
 
         await _outputCanvasContext.ClearRectAsync(0, 0, _canvasWidth, _canvasHeight);
         _renderer.Render();
+    }
+
+    [JSInvokable]
+    public void OnKeyDown(int keyCode) {
+        if (_keyMappings.ContainsKey(keyCode))
+            _cpu.SetKeyDown(_keyMappings[keyCode]);
+    }
+
+    [JSInvokable]
+    public void OnKeyUp(int keyCode) {
+        if (_keyMappings.ContainsKey(keyCode))
+            _cpu.SetKeyUp(_keyMappings[keyCode]);
     }
 }

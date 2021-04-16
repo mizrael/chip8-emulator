@@ -35,6 +35,14 @@
                 instance: instance,
                 canvas: canvases.length ? canvases[0] : null
             };
+
+            window.onkeydown = (e) => {
+                game.instance.invokeMethodAsync('OnKeyDown', e.keyCode);
+            };
+            window.onkeyup = (e) => {
+                game.instance.invokeMethodAsync('OnKeyUp', e.keyCode);
+            };
+
             window.requestAnimationFrame(gameLoop);
         };
     </script>
