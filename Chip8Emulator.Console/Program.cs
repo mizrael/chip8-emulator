@@ -8,7 +8,7 @@ namespace Chip8Emulator.Console
     {
         static async Task Main(string[] args)
         {
-            var cpu = new Cpu();
+            var cpu = new Cpu(new NullRenderer(), new DefaultSoundPlayer());
 
             var romPath = "roms/Space Invaders [David Winter].ch8";
             using (var romData = System.IO.File.OpenRead(romPath))

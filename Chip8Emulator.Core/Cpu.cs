@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace Chip8Emulator.Core
@@ -19,19 +20,18 @@ namespace Chip8Emulator.Core
         private ushort _i = 0;
         private byte _sp = 0; 
         private byte _delay = 0;
-
-        private Keys _lastKeyPressed = Keys.None;
-        private readonly Dictionary<byte, bool> _keyboard;
+                
+        private readonly HashSet<byte> _pressedKeys = new();
 
         private readonly Dictionary<byte, Action<OpCode>> _instructions = new();
         private readonly Dictionary<byte, Action<OpCode>> _miscInstructions = new();
 
-        public Cpu()
-        {
-            _keyboard = new();
-            for (byte i = 0; i < 16; i++)
-                _keyboard.Add(i, false);
+        private readonly IRenderer _renderer;
+        private readonly ISoundPlayer _soundPlayer;
+        private readonly Random _rand = new();
 
+        public Cpu(IRenderer renderer, ISoundPlayer soundPlayer)
+        {
             _instructions[0x0] = this.ZeroOps;
             _instructions[0x1] = this.Jump;
             _instructions[0x2] = this.Call;
@@ -41,6 +41,7 @@ namespace Chip8Emulator.Core
             _instructions[0x7] = this.AddVReg;
             _instructions[0x8] = this.XYOps;
             _instructions[0xA] = this.SetI;
+            _instructions[0xC] = this.Rand;
             _instructions[0xD] = this.Draw;
             _instructions[0xE] = this.SkipOnKey;
             _instructions[0xF] = this.Misc;
@@ -49,7 +50,13 @@ namespace Chip8Emulator.Core
             _miscInstructions[0x65] = this.FillVFromMI;
             _miscInstructions[0x15] = this.SetDelay;
             _miscInstructions[0x07] = this.GetDelay;
-            _miscInstructions[0x0A] = this.WaitKey;            
+            _miscInstructions[0x0A] = this.WaitKey;
+            _miscInstructions[0x33] = this.SetBCD;
+            _miscInstructions[0x29] = this.SetIToCharSprite;
+            _miscInstructions[0x18] = this.PlaySound;
+            
+            _renderer = renderer;
+            _soundPlayer = soundPlayer;
         }
 
         public async Task LoadAsync(System.IO.Stream romData)
@@ -80,26 +87,24 @@ namespace Chip8Emulator.Core
                 throw new NotImplementedException($"instruction '{opCode.Set:X}' not implemented");
                 
             instruction(opCode);
-        }
 
-        public void Render(IRenderer renderer)
-        {
-            renderer.Update(_screen);
+            if (_delay > 0)
+                _delay--;
         }
 
         public void SetKeyDown(Keys key)
-        {
-            _lastKeyPressed = key;
-            _keyboard[(byte)key] = true;
-        }
+            =>_pressedKeys.Add((byte)key);        
 
         public void SetKeyUp(Keys key)
-        {
-            _lastKeyPressed = Keys.None;
-            _keyboard[(byte)key] = false;
-        }
+            =>_pressedKeys.Remove((byte)key);
 
         #region instructions
+
+        // 0xCXNN
+        private void Rand(OpCode opCode)
+        {
+            _v[opCode.X] = (byte)(_rand.Next(0, 255) & opCode.NN);
+        }
 
         // 0x1NNN
         private void Jump(OpCode opCode)
@@ -170,6 +175,8 @@ namespace Chip8Emulator.Core
             }
 
             _v[0xF] = carry;
+            
+            _renderer.Update(_screen);
         }
 
         private void Misc(OpCode opCode){
@@ -236,6 +243,10 @@ namespace Chip8Emulator.Core
                     _v[opCode.X] = (byte)res;
                     _v[0xF] = (byte)(carry ? 1 : 0);
                     break;
+                case 0x5:
+                    _v[0xF] = (byte)(_v[opCode.X] > _v[opCode.Y] ? 1 : 0);
+                    _v[opCode.X] -= _v[opCode.Y];
+                    break;
                 default:
                     throw new NotImplementedException($"instruction '0x8XY{opCode.N:X}' not implemented");
             }
@@ -244,11 +255,11 @@ namespace Chip8Emulator.Core
         private void SkipOnKey(OpCode opCode){
             switch(opCode.NN){
                 case 0x9E:
-                    if(_keyboard[_v[opCode.X]])
+                    if(_pressedKeys.Contains(_v[opCode.X]))
                         _pc +=2;
                     break;
                 case 0xA1:
-                    if(!_keyboard[_v[opCode.X]])
+                    if(!_pressedKeys.Contains(_v[opCode.X]))
                         _pc +=2;
                     break;
                 default:
@@ -283,33 +294,34 @@ namespace Chip8Emulator.Core
         //0xFX0A
         private void WaitKey(OpCode opCode)
         {
-            if (_lastKeyPressed == Keys.None)
+            if (!_pressedKeys.Any())
                 _pc -= 2;
             else
-                _v[opCode.X] = (byte)_lastKeyPressed;
+                _v[opCode.X] = _pressedKeys.First();
+        }
+
+        //0xFX33
+        private void SetBCD(OpCode opCode)
+        {
+            var vx = _v[opCode.X];
+            _memory[_i] = (byte)(vx / 100);
+            _memory[_i + 1] = (byte)((vx / 10) % 10);
+            _memory[_i + 2] = (byte)(vx % 10);
+        }
+
+        //0xFX29
+        private void SetIToCharSprite(OpCode opCode)
+        {            
+            _i = (ushort)(_v[opCode.X] * 5); 
+        }
+
+        // 0xFX18
+        private void PlaySound(OpCode opCode)
+        {
+            var duration = _v[opCode.X];
+            _soundPlayer.Beep(duration);
         }
 
         #endregion misc instructions
-    }
-
-    public enum Keys
-    {
-        None,
-        Number0 = 0x0,
-        Number1 = 0x1,
-        Number2 = 0x2,
-        Number3 = 0x3,
-        Q = 0x4,
-        W = 0x5,
-        E = 0x6,
-        A = 0x7,
-        S = 0x8,
-        D = 0x9,
-        Z = 0xA,
-        X = 0xB,
-        C = 0xC,
-        Enter = 0xD,
-        Space = 0xE,
-        Esc = 0xF
     }
 }
