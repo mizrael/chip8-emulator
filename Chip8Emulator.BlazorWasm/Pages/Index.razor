@@ -5,6 +5,16 @@
 @inject IJSRuntime JsRuntime;
 @inject HttpClient HttpClient;
 
+<div id="roms-container">
+    <select @bind="_selectedRom">
+        <option>-- Select a ROM --</option>
+        @foreach(var rom in _roms){
+            <option value="@rom">@rom</option>
+        }
+    </select>
+    <button @onclick="LoadRom">Load</button>
+</div>
+
 <div id="canvas-container">
     <BECanvas Width="@_canvasWidth" Height="@_canvasHeight" @ref="_canvasReference"></BECanvas>
 </div>
@@ -20,6 +30,33 @@
     Core.IRenderer _renderer;
 
     bool[,] _currFrame;
+
+    string[] _roms = new[]{
+        "15PUZZLE",        
+        "BRIX",
+        "HIDDEN",
+        "MAZE",
+        "PONG",
+        "SYZYGY",
+        "TICTAC",
+        "VERS",
+        "BLINKY",
+        "CONNECT4",
+        "INVADERS",
+        "MERLIN",
+        "PONG2",
+        "TANK",
+        "UFO",
+        "WIPEOFF",
+        "BLITZ",
+        "GUESS",
+        "KALEID",
+        "MISSILE",
+        "PUZZLE",
+        "TETRIS",
+        "VBRIX"
+    };
+    string _selectedRom;
 
     private readonly Dictionary<int, Core.Keys> _keyMappings = new Dictionary<int, Core.Keys>() {
             { 49, Core.Keys.Number1 }, // 1
@@ -38,23 +75,39 @@
             { 88, Core.Keys.Number0 }, // x
             { 67, Core.Keys.B }, // c
             { 86, Core.Keys.F } // v
-        };
+    };
 
+    private async Task LoadRom(){
+        if(string.IsNullOrWhiteSpace(_selectedRom))
+            return;
+        var romData = await HttpClient.GetStreamAsync($"roms/{_selectedRom}");
+        await _cpu.LoadAsync(romData);
+    }
+
+    private async Task UpdateFrame(bool[,] data){
+         _currFrame = data;
+    }
+ 
     private async Task RenderFrame()
     {
-        if (null == _currFrame) return;
+        if (null == _currFrame) 
+            return;
         var spriteWidth = _canvasWidth / Chip8Emulator.Core.Cpu.SCREEN_WIDTH;
         var spriteHeight = _canvasHeight / Chip8Emulator.Core.Cpu.SCREEN_HEIGHT;
+
+        await _outputCanvasContext.BeginBatchAsync();
+
+        await _outputCanvasContext.SetFillStyleAsync("green");
 
         for (int col = 0; col != Chip8Emulator.Core.Cpu.SCREEN_WIDTH; col++)
             for (int row = 0; row != Chip8Emulator.Core.Cpu.SCREEN_HEIGHT; row++)
             {
                 if (!_currFrame[col, row])
                     continue;
-
-                await _outputCanvasContext.SetFillStyleAsync("green");
                 await _outputCanvasContext.FillRectAsync(col * spriteWidth, row* spriteHeight, spriteWidth, spriteHeight);
             }
+
+        await _outputCanvasContext.EndBatchAsync();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -62,11 +115,8 @@
         if (!firstRender)
             return;
 
-        _renderer = new Chip8Emulator.Core.LambdaRenderer(data => _currFrame = data, ()=> RenderFrame());
+        _renderer = new Chip8Emulator.Core.LambdaRenderer(async data => UpdateFrame(data), async()=> await RenderFrame());
         _cpu = new Core.Cpu(_renderer, new Chip8Emulator.Core.DefaultSoundPlayer());
-
-        var romData = await HttpClient.GetStreamAsync("roms/PONG");
-        await _cpu.LoadAsync(romData);
 
         _outputCanvasContext = await _canvasReference.CreateCanvas2DAsync();
         await JsRuntime.InvokeAsync<object>("initGame", DotNetObjectReference.Create(this));

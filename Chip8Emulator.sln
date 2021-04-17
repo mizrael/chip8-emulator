@@ -3,8 +3,6 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.31112.23
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Chip8Emulator.Console", "Chip8Emulator.Console\Chip8Emulator.Console.csproj", "{EFA8FFC8-E918-41D0-BF41-90993360B1A8}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Chip8Emulator.Core", "Chip8Emulator.Core\Chip8Emulator.Core.csproj", "{37D369C9-0A68-454E-ACB2-D26EB508B869}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Chip8Emulator.MonoGame", "Chip8Emulator.MonoGame\Chip8Emulator.MonoGame.csproj", "{56C4A2A1-4B41-4111-B234-2D952B1FAF5E}"
