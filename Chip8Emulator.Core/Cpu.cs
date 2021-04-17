@@ -7,7 +7,9 @@ namespace Chip8Emulator.Core
 {
     public class Cpu
     {
-        private const int MEMORY_START = 0x200;         
+        #region members
+
+        private const int ROM_START_LOCATION = 0x200;         
         private readonly byte[] _memory = new byte[0x1000];        
         private readonly byte[] _v = new byte[16];
         private readonly ushort[] _stack = new ushort[16];
@@ -16,7 +18,7 @@ namespace Chip8Emulator.Core
         public const int SCREEN_HEIGHT = 32;
         private readonly bool[,] _screen = new bool[SCREEN_WIDTH, SCREEN_HEIGHT];
 
-        private ushort _pc = MEMORY_START;
+        private ushort _pc = ROM_START_LOCATION;
         private ushort _i = 0;
         private byte _sp = 0; 
         private byte _delay = 0;
@@ -29,6 +31,8 @@ namespace Chip8Emulator.Core
         private readonly IRenderer _renderer;
         private readonly ISoundPlayer _soundPlayer;
         private readonly Random _rand = new();
+
+        #endregion members
 
         public Cpu(IRenderer renderer, ISoundPlayer soundPlayer)
         {
@@ -64,17 +68,20 @@ namespace Chip8Emulator.Core
         {
             Reset();
 
-            using var ms = new System.IO.MemoryStream(_memory, MEMORY_START, (int)romData.Length, true);
+            using var ms = new System.IO.MemoryStream(_memory, ROM_START_LOCATION, (int)romData.Length, true);
             await romData.CopyToAsync(ms);
         }
 
         public void Reset()
         {
             Array.Clear(_memory, 0, _memory.Length);
+            for (var i = 0; i != Font.Characters.Length; ++i)
+                _memory[i] = Font.Characters[i];
+
             Array.Clear(_v, 0, _v.Length);
             Array.Clear(_stack, 0, _stack.Length);
             Array.Clear(_screen, 0, _screen.Length);
-            _pc = MEMORY_START;
+            _pc = ROM_START_LOCATION;
             _i = 0;
             _sp = 0;
         }
