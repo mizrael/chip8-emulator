@@ -15,13 +15,20 @@
     <button @onclick="LoadRom">Load</button>
 </div>
 
-<div id="canvas-container">
+<div id="main-canvas-container" class="canvas-container">
     <BECanvas Width="@_canvasWidth" Height="@_canvasHeight" @ref="_canvasReference"></BECanvas>
+</div>
+
+<div class="canvas-container">
+    <BECanvas Width="@_canvasWidth" Height="@_canvasHeight" @ref="_offscreenCanvasReference"></BECanvas>
 </div>
 
 @code{
     BECanvasComponent _canvasReference = null;
     Canvas2DContext _outputCanvasContext;
+
+    BECanvasComponent _offscreenCanvasReference;
+    Canvas2DContext _offscreenCanvasContext;
 
     int _canvasWidth = 800;
     int _canvasHeight = 400;
@@ -85,29 +92,35 @@
     }
 
     private async Task UpdateFrame(bool[,] data){
+        await _offscreenCanvasContext.ClearRectAsync(0, 0, _canvasWidth, _canvasHeight);
+
          _currFrame = data;
-    }
- 
-    private async Task RenderFrame()
-    {
+
         if (null == _currFrame) 
             return;
+
         var spriteWidth = _canvasWidth / Chip8Emulator.Core.Cpu.SCREEN_WIDTH;
         var spriteHeight = _canvasHeight / Chip8Emulator.Core.Cpu.SCREEN_HEIGHT;
 
-        await _outputCanvasContext.BeginBatchAsync();
+        await _offscreenCanvasContext.BeginBatchAsync();
 
-        await _outputCanvasContext.SetFillStyleAsync("green");
+        await _offscreenCanvasContext.SetFillStyleAsync("green");
 
         for (int col = 0; col != Chip8Emulator.Core.Cpu.SCREEN_WIDTH; col++)
             for (int row = 0; row != Chip8Emulator.Core.Cpu.SCREEN_HEIGHT; row++)
             {
                 if (!_currFrame[col, row])
                     continue;
-                await _outputCanvasContext.FillRectAsync(col * spriteWidth, row* spriteHeight, spriteWidth, spriteHeight);
+                await _offscreenCanvasContext.FillRectAsync(col * spriteWidth, row* spriteHeight, spriteWidth, spriteHeight);
             }
 
-        await _outputCanvasContext.EndBatchAsync();
+        await _offscreenCanvasContext.EndBatchAsync();
+    }
+ 
+    private async Task RenderFrame()
+    {
+        await _outputCanvasContext.ClearRectAsync(0, 0, _canvasWidth, _canvasHeight);
+        await _outputCanvasContext.DrawImageAsync(_offscreenCanvasContext.Canvas, 0, 0);
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -115,10 +128,12 @@
         if (!firstRender)
             return;
 
-        _renderer = new Chip8Emulator.Core.LambdaRenderer(async data => UpdateFrame(data), async()=> await RenderFrame());
+        _renderer = new Chip8Emulator.Core.LambdaRenderer(async data => await UpdateFrame(data), async()=> await RenderFrame());
         _cpu = new Core.Cpu(_renderer, new Chip8Emulator.Core.DefaultSoundPlayer());
 
         _outputCanvasContext = await _canvasReference.CreateCanvas2DAsync();
+        _offscreenCanvasContext = await _offscreenCanvasReference.CreateCanvas2DAsync();
+
         await JsRuntime.InvokeAsync<object>("initGame", DotNetObjectReference.Create(this));
     }
 
@@ -130,7 +145,6 @@
 
         _cpu.Tick();
 
-        await _outputCanvasContext.ClearRectAsync(0, 0, _canvasWidth, _canvasHeight);
         _renderer.Render();
     }
 
