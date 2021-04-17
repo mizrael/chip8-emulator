@@ -5,7 +5,7 @@
 @inject IJSRuntime JsRuntime;
 @inject HttpClient HttpClient;
 
-<div id="roms-container">
+<div id="controls">
     <select @bind="_selectedRom">
         <option>-- Select a ROM --</option>
         @foreach(var rom in _roms){
@@ -13,6 +13,10 @@
         }
     </select>
     <button @onclick="LoadRom">Load</button>
+
+    <label for="tickInterval">Tick interval (ms)</label>
+    <input type="number" min="1" @bind="_tickInterval" id="tickInterval" />
+    <button @onclick="SetInterval">Set Interval</button>
 </div>
 
 <div id="main-canvas-container" class="canvas-container">
@@ -35,6 +39,8 @@
 
     Core.Cpu _cpu;
     Core.IRenderer _renderer;
+    System.Timers.Timer _cpuTickTimer;
+    int _tickInterval = 10;
 
     bool[,] _currFrame;
 
@@ -84,11 +90,16 @@
             { 86, Core.Keys.F } // v
     };
 
-    private async Task LoadRom(){
+    private async Task LoadRom()
+    {
+        _cpuTickTimer.Enabled = false;
+
         if(string.IsNullOrWhiteSpace(_selectedRom))
             return;
         var romData = await HttpClient.GetStreamAsync($"roms/{_selectedRom}");
         await _cpu.LoadAsync(romData);
+
+        _cpuTickTimer.Enabled = true;
     }
 
     private async Task UpdateFrame(bool[,] data){
@@ -123,13 +134,25 @@
         await _outputCanvasContext.DrawImageAsync(_offscreenCanvasContext.Canvas, 0, 0);
     }
 
+    private void SetInterval()
+        => _cpuTickTimer.Interval = _tickInterval;
+    
+    protected override void OnInitialized()
+    {
+        _renderer = new Chip8Emulator.Core.LambdaRenderer(async data => await UpdateFrame(data), async()=> await RenderFrame());
+        _cpu = new Core.Cpu(_renderer, new Chip8Emulator.Core.DefaultSoundPlayer());
+        
+        _cpuTickTimer = new System.Timers.Timer();
+        _cpuTickTimer.Elapsed += (s, e) =>
+        {
+            _cpu.Tick();
+        };
+    }
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!firstRender)
             return;
-
-        _renderer = new Chip8Emulator.Core.LambdaRenderer(async data => await UpdateFrame(data), async()=> await RenderFrame());
-        _cpu = new Core.Cpu(_renderer, new Chip8Emulator.Core.DefaultSoundPlayer());
 
         _outputCanvasContext = await _canvasReference.CreateCanvas2DAsync();
         _offscreenCanvasContext = await _offscreenCanvasReference.CreateCanvas2DAsync();
@@ -142,8 +165,6 @@
     {
         _canvasWidth = width;
         _canvasHeight = height;
-
-        _cpu.Tick();
 
         _renderer.Render();
     }
