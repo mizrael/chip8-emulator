@@ -20,32 +20,6 @@
         <a class="dismiss">🗙</a>
     </div>
     <script src="_framework/blazor.webassembly.js"></script>
-    <script src="_content/Blazor.Extensions.Canvas/blazor.extensions.canvas.js"></script>
-
-    <script>
-        function gameLoop(timeStamp) {
-            window.requestAnimationFrame(gameLoop);
-            game.instance.invokeMethodAsync('GameLoop', timeStamp, game.canvas.width, game.canvas.height);
-        }
-
-        window.initGame = (instance) => {
-            var canvasContainer = document.getElementById('main-canvas-container'),
-                canvases = canvasContainer.getElementsByTagName('canvas') || [];
-            window.game = {
-                instance: instance,
-                canvas: canvases.length ? canvases[0] : null
-            };
-
-            window.onkeydown = (e) => {
-                game.instance.invokeMethodAsync('OnKeyDown', e.keyCode);
-            };
-            window.onkeyup = (e) => {
-                game.instance.invokeMethodAsync('OnKeyUp', e.keyCode);
-            };
-
-            window.requestAnimationFrame(gameLoop);
-        };
-    </script>
 </body>
 
 </html>

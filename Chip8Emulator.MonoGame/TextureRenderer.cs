@@ -2,47 +2,28 @@ using Chip8Emulator.Core;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
-namespace Chip8Emulator.MonoGame
+namespace Chip8Emulator.MonoGame;
+
+public class TextureRenderer : IRenderer
 {
-    public class TextureRenderer : IRenderer
+    public readonly Texture2D Texture;
+    private readonly Color[] _pixels;
+
+    public TextureRenderer(GraphicsDevice graphicsDevice)
     {
-        private readonly Texture2D _texture;
-        private readonly Color[] _pixels;
-        private readonly GraphicsDevice _graphicsDevice;
-        private readonly SpriteBatch _spriteBatch;
-        
-        public TextureRenderer(GraphicsDevice graphicsDevice, SpriteBatch spriteBatch)
-        {
-            _graphicsDevice = graphicsDevice;
-            _spriteBatch = spriteBatch;
-            _pixels = new Color[Cpu.SCREEN_WIDTH * Cpu.SCREEN_HEIGHT];
-            _texture = new Texture2D(graphicsDevice, Cpu.SCREEN_WIDTH, Cpu.SCREEN_HEIGHT, false, SurfaceFormat.Color);
-        }
+        _pixels = new Color[Constants.SCREEN_WIDTH * Constants.SCREEN_HEIGHT];
+        Texture = new Texture2D(graphicsDevice, Constants.SCREEN_WIDTH, Constants.SCREEN_HEIGHT, false, SurfaceFormat.Color);
+    }
 
-        public void Update(bool[,] screen)
-        {
-            for (int col = 0; col != Cpu.SCREEN_WIDTH; col++)
-                for (int row = 0; row != Cpu.SCREEN_HEIGHT; row++)
-                {
-                    int index = row * Cpu.SCREEN_WIDTH + col;
-                    _pixels[index] = screen[col, row] ? Color.White : Color.Black;
-                }
-
-            _texture.SetData(_pixels);
-        }
-
-        public void Render()
-        {
-            _spriteBatch.Begin(samplerState: new SamplerState()
+    public void Draw(bool[,] data)
+    {
+        for (int col = 0; col != Constants.SCREEN_WIDTH; col++)
+            for (int row = 0; row != Constants.SCREEN_HEIGHT; row++)
             {
-                Filter = TextureFilter.Point
-            });
+                int index = row * Constants.SCREEN_WIDTH + col;
+                _pixels[index] = data[col, row] ? Color.White : Color.Black;
+            }
 
-            _spriteBatch.Draw(_texture, _graphicsDevice.Viewport.Bounds, Color.White);
-
-            _spriteBatch.End();
-        }
-
-        public Vector2 Scale { get; set; } = new Vector2(4, 4);
+        Texture.SetData(_pixels);
     }
 }

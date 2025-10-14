@@ -1,8 +1,6 @@
-namespace Chip8Emulator.Core
+namespace Chip8Emulator.Core;
+
+public interface IRenderer
 {
-    public interface IRenderer
-    {
-        void Update(bool[,] screen);
-        void Render();
-    }
+    void Draw(bool[,] data);
 }
