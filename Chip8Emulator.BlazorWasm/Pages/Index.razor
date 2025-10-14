@@ -29,6 +29,9 @@
     CanvasBase _offscreenCanvas;
     IRenderContext _offscreenRenderContext;
 
+    int _renderTarget;
+    byte[] _frameBuffer;
+
     int _canvasWidth = 800;
     int _canvasHeight = 400;
 
@@ -106,27 +109,27 @@
 
     private void UpdateFrame(bool[,] data)
     {
-        _offscreenRenderContext.ClearRect(0, 0, Chip8Emulator.Core.Constants.SCREEN_WIDTH, Chip8Emulator.Core.Constants.SCREEN_HEIGHT);
-
-        var spriteWidth = 1;
-        var spriteHeight = 1;
-
-        _offscreenRenderContext.FillStyle = "green";
-
         for (int col = 0; col != Chip8Emulator.Core.Constants.SCREEN_WIDTH; col++)
             for (int row = 0; row != Chip8Emulator.Core.Constants.SCREEN_HEIGHT; row++)
             {
-                if (data[col, row])
-                    _offscreenRenderContext.FillRect(col, row, spriteWidth, spriteHeight);
+                var color = data[col, row] ? (byte)255 : (byte)0;
+                int index = (row * Chip8Emulator.Core.Constants.SCREEN_WIDTH + col) * 4;
+                _frameBuffer[index + 0] = color; // R
+                _frameBuffer[index + 1] = color; // G
+                _frameBuffer[index + 2] = color; // B
+                _frameBuffer[index + 3] = 255;   // A
             }
+
+        _offscreenRenderContext.PutImageData(_renderTarget, _frameBuffer, 0, 0);
     }
 
     private void SetCPUInterval()
-        => _cpuTickTimer.Interval = _tickInterval;
+    => _cpuTickTimer.Interval = _tickInterval;
 
     private void OnMainCanvasReady(CanvasBase canvas)
     {
         _mainRenderContext = canvas.RenderContext;
+        _mainRenderContext.ImageSmoothingEnabled = false;
     }
 
     private void OnMainCanvasResize(Size windowSize)
@@ -138,8 +141,16 @@
     private void OnMainCanvasFrameReady(float timestamp)
     {
         _mainRenderContext.ClearRect(0, 0, _canvasWidth, _canvasHeight);
+        if (_offscreenCanvas != null)
+            _mainRenderContext.DrawImage(_offscreenCanvas.ElementReference, 0, 0, _canvasWidth, _canvasHeight);
+    }
 
-        _mainRenderContext.DrawImage(_offscreenCanvas.ElementReference, 0, 0, _canvasWidth, _canvasHeight);
+    private async ValueTask OnOffscreenCanvasReady(CanvasBase canvas)
+    {
+        _offscreenCanvas = canvas;
+        _offscreenRenderContext = canvas.RenderContext;
+        _renderTarget = await _offscreenRenderContext.CreateImageDataAsync(Chip8Emulator.Core.Constants.SCREEN_WIDTH, Chip8Emulator.Core.Constants.SCREEN_HEIGHT);
+        _frameBuffer = new byte[Chip8Emulator.Core.Constants.SCREEN_WIDTH * Chip8Emulator.Core.Constants.SCREEN_HEIGHT * 4];
     }
 
     protected override void OnAfterRender(bool firstRender)
@@ -154,7 +165,9 @@
             Hidden = false,
             OnCanvasReady = this.OnMainCanvasReady,
             OnResize = this.OnMainCanvasResize,
-            OnFrameReady = this.OnMainCanvasFrameReady
+            OnFrameReady = this.OnMainCanvasFrameReady,
+            OnKeyDown = this.OnKeyDown,
+            OnKeyUp = this.OnKeyUp
         });
 
         _canvasManager.CreateCanvas("offscreenCanvas", new CanvasCreationOptions()
@@ -162,11 +175,7 @@
             Width = Chip8Emulator.Core.Constants.SCREEN_WIDTH,
             Height = Chip8Emulator.Core.Constants.SCREEN_HEIGHT,
             Hidden = true,
-            OnCanvasReady = (canvas) =>
-            {
-                _offscreenCanvas = canvas;
-                _offscreenRenderContext = canvas.RenderContext;
-            },
+            OnCanvasReadyAsync = this.OnOffscreenCanvasReady
         });
 
         _renderer = new Chip8Emulator.Core.LambdaRenderer(data => UpdateFrame(data));
@@ -180,17 +189,15 @@
         };
     }
 
-    [JSInvokable]
-    public void OnKeyDown(int keyCode)
+    public void OnKeyDown(KeyboardPressEvent evt)
     {
-        if (_keyMappings.ContainsKey(keyCode))
-            _cpu.SetKeyDown(_keyMappings[keyCode]);
+        if (_keyMappings.ContainsKey(evt.KeyCode))
+            _cpu.SetKeyDown(_keyMappings[evt.KeyCode]);
     }
 
-    [JSInvokable]
-    public void OnKeyUp(int keyCode)
+    public void OnKeyUp(KeyboardPressEvent evt)
     {
-        if (_keyMappings.ContainsKey(keyCode))
-            _cpu.SetKeyUp(_keyMappings[keyCode]);
+        if (_keyMappings.ContainsKey(evt.KeyCode))
+            _cpu.SetKeyUp(_keyMappings[evt.KeyCode]);
     }
 }

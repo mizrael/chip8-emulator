@@ -4,10 +4,10 @@
     <TargetFramework>net9.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Blazorex" Version="1.1.6" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="9.0.9" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="9.0.9" PrivateAssets="all" />
-    <PackageReference Include="System.Net.Http.Json" Version="9.0.9" />
+    <PackageReference Include="Blazorex" Version="1.2.1" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="9.0.10" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="9.0.10" PrivateAssets="all" />
+    <PackageReference Include="System.Net.Http.Json" Version="9.0.10" />
   </ItemGroup>
 
   <ItemGroup>
