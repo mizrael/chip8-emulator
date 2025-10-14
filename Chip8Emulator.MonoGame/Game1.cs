@@ -4,6 +4,7 @@ using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Buffers;
 using System.Collections.Generic;
+using System.Linq;
 using Color = Microsoft.Xna.Framework.Color;
 using MonoKeys = Microsoft.Xna.Framework.Input.Keys;
 
@@ -66,24 +67,13 @@ public class Game1 : Game
 
     protected override void LoadContent()
     {
-        _spriteBatch = new SpriteBatch(GraphicsDevice);                        
+        _spriteBatch = new SpriteBatch(GraphicsDevice);
         _renderer = new TextureRenderer(this.GraphicsDevice);
         _cpu = new Cpu(_renderer, new DefaultSoundPlayer());
 
         var romPath = "Content/roms/TETRIS";
         using var romData = System.IO.File.OpenRead(romPath);
-        int romSize = (int)romData.Length;
-        var buffer = ArrayPool<byte>.Shared.Rent(romSize);
-        try
-        {
-            if (romData.Read(buffer) < 1)
-                throw new ArgumentException($"rom {romPath} is invalid");
-            _cpu.LoadRom(buffer.AsSpan().Slice(0, romSize));
-        }
-        finally
-        {
-            ArrayPool<byte>.Shared.Return(buffer);
-        }
+        _cpu.LoadRom(romData);
     }
 
     protected override void Update(GameTime gameTime)

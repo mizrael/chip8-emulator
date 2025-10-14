@@ -1,6 +1,4 @@
 ﻿@page "/"
-@using Blazor.Extensions
-@using Blazor.Extensions.Canvas.Canvas2D
 
 @inject IJSRuntime JsRuntime;
 @inject HttpClient HttpClient;
@@ -8,7 +6,8 @@
 <div id="controls">
     <select @bind="_selectedRom">
         <option>-- Select a ROM --</option>
-        @foreach(var rom in _roms){
+        @foreach (var rom in _roms)
+        {
             <option value="@rom">@rom</option>
         }
     </select>
@@ -16,23 +15,19 @@
 
     <label for="tickInterval">Tick interval (ms)</label>
     <input type="number" min="1" @bind="_tickInterval" id="tickInterval" />
-    <button @onclick="SetInterval">Set Interval</button>
+    <button @onclick="SetCPUInterval">Set Interval</button>
 </div>
 
 <div id="main-canvas-container" class="canvas-container">
-    <BECanvas Width="@_canvasWidth" Height="@_canvasHeight" @ref="_canvasReference"></BECanvas>
-</div>
-
-<div class="canvas-container">
-    <BECanvas Width="@_canvasWidth" Height="@_canvasHeight" @ref="_offscreenCanvasReference"></BECanvas>
+    <CanvasManager @ref="_canvasManager" />
 </div>
 
 @code{
-    BECanvasComponent _canvasReference = null;
-    Canvas2DContext _outputCanvasContext;
+    CanvasManager _canvasManager;
+    IRenderContext _mainRenderContext;
 
-    BECanvasComponent _offscreenCanvasReference;
-    Canvas2DContext _offscreenCanvasContext;
+    CanvasBase _offscreenCanvas;
+    IRenderContext _offscreenRenderContext;
 
     int _canvasWidth = 800;
     int _canvasHeight = 400;
@@ -42,10 +37,8 @@
     System.Timers.Timer _cpuTickTimer;
     int _tickInterval = 10;
 
-    bool[,] _currFrame;
-
     string[] _roms = new[]{
-        "15PUZZLE",        
+        "15PUZZLE",
         "BRIX",
         "HIDDEN",
         "MAZE",
@@ -94,89 +87,109 @@
     {
         _cpuTickTimer.Enabled = false;
 
-        if(string.IsNullOrWhiteSpace(_selectedRom))
+        if (string.IsNullOrWhiteSpace(_selectedRom))
             return;
-        var romData = await HttpClient.GetStreamAsync($"roms/{_selectedRom}");
-        await _cpu.LoadAsync(romData);
+
+        var romUrl = $"roms/{_selectedRom}";
+        using var response = await HttpClient.GetAsync(romUrl);
+        if (!response.IsSuccessStatusCode)
+        {
+            Console.WriteLine($"Failed to load ROM from {romUrl}");
+            return;
+        }
+
+        using var romData = await response.Content.ReadAsStreamAsync();
+        _cpu.LoadRom(romData);
 
         _cpuTickTimer.Enabled = true;
     }
 
-    private async Task UpdateFrame(bool[,] data){
-        await _offscreenCanvasContext.ClearRectAsync(0, 0, _canvasWidth, _canvasHeight);
+    private void UpdateFrame(bool[,] data)
+    {
+        _offscreenRenderContext.ClearRect(0, 0, Chip8Emulator.Core.Constants.SCREEN_WIDTH, Chip8Emulator.Core.Constants.SCREEN_HEIGHT);
 
-         _currFrame = data;
+        var spriteWidth = 1;
+        var spriteHeight = 1;
 
-        if (null == _currFrame) 
+        _offscreenRenderContext.FillStyle = "green";
+
+        for (int col = 0; col != Chip8Emulator.Core.Constants.SCREEN_WIDTH; col++)
+            for (int row = 0; row != Chip8Emulator.Core.Constants.SCREEN_HEIGHT; row++)
+            {
+                if (data[col, row])
+                    _offscreenRenderContext.FillRect(col, row, spriteWidth, spriteHeight);
+            }
+    }
+
+    private void SetCPUInterval()
+        => _cpuTickTimer.Interval = _tickInterval;
+
+    private void OnMainCanvasReady(CanvasBase canvas)
+    {
+        _mainRenderContext = canvas.RenderContext;
+    }
+
+    private void OnMainCanvasResize(Size windowSize)
+    {
+        _canvasWidth = windowSize.Width;
+        _canvasHeight = windowSize.Height;
+    }
+
+    private void OnMainCanvasFrameReady(float timestamp)
+    {
+        _mainRenderContext.ClearRect(0, 0, _canvasWidth, _canvasHeight);
+
+        _mainRenderContext.DrawImage(_offscreenCanvas.ElementReference, 0, 0, _canvasWidth, _canvasHeight);
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (!firstRender)
             return;
 
-        var spriteWidth = _canvasWidth / Chip8Emulator.Core.Cpu.SCREEN_WIDTH;
-        var spriteHeight = _canvasHeight / Chip8Emulator.Core.Cpu.SCREEN_HEIGHT;
+        _canvasManager.CreateCanvas("mainCanvas", new CanvasCreationOptions()
+        {
+            Width = _canvasWidth,
+            Height = _canvasHeight,
+            Hidden = false,
+            OnCanvasReady = this.OnMainCanvasReady,
+            OnResize = this.OnMainCanvasResize,
+            OnFrameReady = this.OnMainCanvasFrameReady
+        });
 
-        await _offscreenCanvasContext.BeginBatchAsync();
-
-        await _offscreenCanvasContext.SetFillStyleAsync("green");
-
-        for (int col = 0; col != Chip8Emulator.Core.Cpu.SCREEN_WIDTH; col++)
-            for (int row = 0; row != Chip8Emulator.Core.Cpu.SCREEN_HEIGHT; row++)
+        _canvasManager.CreateCanvas("offscreenCanvas", new CanvasCreationOptions()
+        {
+            Width = Chip8Emulator.Core.Constants.SCREEN_WIDTH,
+            Height = Chip8Emulator.Core.Constants.SCREEN_HEIGHT,
+            Hidden = true,
+            OnCanvasReady = (canvas) =>
             {
-                if (!_currFrame[col, row])
-                    continue;
-                await _offscreenCanvasContext.FillRectAsync(col * spriteWidth, row* spriteHeight, spriteWidth, spriteHeight);
-            }
+                _offscreenCanvas = canvas;
+                _offscreenRenderContext = canvas.RenderContext;
+            },
+        });
 
-        await _offscreenCanvasContext.EndBatchAsync();
-    }
- 
-    private async Task RenderFrame()
-    {
-        await _outputCanvasContext.ClearRectAsync(0, 0, _canvasWidth, _canvasHeight);
-        await _outputCanvasContext.DrawImageAsync(_offscreenCanvasContext.Canvas, 0, 0);
-    }
-
-    private void SetInterval()
-        => _cpuTickTimer.Interval = _tickInterval;
-    
-    protected override void OnInitialized()
-    {
-        _renderer = new Chip8Emulator.Core.LambdaRenderer(async data => await UpdateFrame(data), async()=> await RenderFrame());
+        _renderer = new Chip8Emulator.Core.LambdaRenderer(data => UpdateFrame(data));
         _cpu = new Core.Cpu(_renderer, new Chip8Emulator.Core.DefaultSoundPlayer());
-        
+
         _cpuTickTimer = new System.Timers.Timer();
+        this.SetCPUInterval();
         _cpuTickTimer.Elapsed += (s, e) =>
         {
             _cpu.Tick();
         };
     }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (!firstRender)
-            return;
-
-        _outputCanvasContext = await _canvasReference.CreateCanvas2DAsync();
-        _offscreenCanvasContext = await _offscreenCanvasReference.CreateCanvas2DAsync();
-
-        await JsRuntime.InvokeAsync<object>("initGame", DotNetObjectReference.Create(this));
-    }
-
     [JSInvokable]
-    public async ValueTask GameLoop(float timeStamp, int width, int height)
+    public void OnKeyDown(int keyCode)
     {
-        _canvasWidth = width;
-        _canvasHeight = height;
-
-        _renderer.Render();
-    }
-
-    [JSInvokable]
-    public void OnKeyDown(int keyCode) {
         if (_keyMappings.ContainsKey(keyCode))
             _cpu.SetKeyDown(_keyMappings[keyCode]);
     }
 
     [JSInvokable]
-    public void OnKeyUp(int keyCode) {
+    public void OnKeyUp(int keyCode)
+    {
         if (_keyMappings.ContainsKey(keyCode))
             _cpu.SetKeyUp(_keyMappings[keyCode]);
     }

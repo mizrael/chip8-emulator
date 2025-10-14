@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -65,15 +66,27 @@ public class Cpu
         romData.CopyTo(_memory.AsSpan(Constants.ROM_START_LOCATION));
     }
 
+    public void LoadRom(System.IO.Stream romData)
+    {
+        Reset();
+
+        int romSize = (int)romData.Length;
+
+        var dest = _memory.AsSpan(Constants.ROM_START_LOCATION);
+        if (romData.Read(dest) < 1)
+            throw new ArgumentException("input stream is invalid");
+    }
+
     public void Reset()
     {
-        Array.Clear(_memory, 0, _memory.Length);
+        Array.Clear(_v);
+        Array.Clear(_stack);
+        Array.Clear(_screen); 
+        
+        Array.Clear(_memory);
         for (var i = 0; i != Font.Characters.Length; ++i)
             _memory[i] = Font.Characters[i];
 
-        Array.Clear(_v, 0, _v.Length);
-        Array.Clear(_stack, 0, _stack.Length);
-        Array.Clear(_screen, 0, _screen.Length);
         _pc = Constants.ROM_START_LOCATION;
         _i = 0;
         _sp = 0;
