@@ -1,97 +1,111 @@
 ﻿using Chip8Emulator.Core;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using System;
+using System.Buffers;
 using System.Collections.Generic;
 using Color = Microsoft.Xna.Framework.Color;
 using MonoKeys = Microsoft.Xna.Framework.Input.Keys;
 
-namespace Chip8Emulator.MonoGame
+namespace Chip8Emulator.MonoGame;
+
+public class Game1 : Game
 {
-    public class Game1 : Game
+    private GraphicsDeviceManager _graphics;
+    private SpriteBatch _spriteBatch;
+
+    private Cpu _cpu;
+    
+    private TextureRenderer _renderer;
+
+    private readonly Dictionary<MonoKeys, Core.Keys> _keyMappings = new Dictionary<MonoKeys, Keys>() {
+        { MonoKeys.D1, Keys.Number1 },
+        { MonoKeys.D2, Keys.Number2 },
+        { MonoKeys.D3, Keys.Number3 },
+        { MonoKeys.D4, Keys.C },
+        { MonoKeys.Q, Keys.Number4 },
+        { MonoKeys.W, Keys.Number5 },
+        { MonoKeys.E, Keys.Number6 },
+        { MonoKeys.R, Keys.D },
+        { MonoKeys.A, Keys.Number7 },
+        { MonoKeys.S, Keys.Number8 },
+        { MonoKeys.D, Keys.Number9 },
+        { MonoKeys.F, Keys.E },
+        { MonoKeys.Z, Keys.A },
+        { MonoKeys.X, Keys.Number0 },
+        { MonoKeys.C, Keys.B },
+        { MonoKeys.V, Keys.F }
+    };
+
+    public Game1()
     {
-        private GraphicsDeviceManager _graphics;
-        private SpriteBatch _spriteBatch;
+        _graphics = new GraphicsDeviceManager(this);
 
-        private Cpu _cpu;
+        Content.RootDirectory = "Content";
+        IsMouseVisible = false;
+    }            
+
+    protected override void Initialize()
+    { 
+        base.Initialize();
+        this.Window.KeyDown += Window_KeyDown;
+        this.Window.KeyUp += Window_KeyUp;
+    }
+
+    private void Window_KeyUp(object sender, InputKeyEventArgs e)
+    {
+        if (_keyMappings.ContainsKey(e.Key))
+            _cpu.SetKeyUp(_keyMappings[e.Key]);
+    }
+
+    private void Window_KeyDown(object sender, InputKeyEventArgs e)
+    {
+        if (_keyMappings.ContainsKey(e.Key))
+            _cpu.SetKeyDown(_keyMappings[e.Key]);
+    }
+
+    protected override void LoadContent()
+    {
+        _spriteBatch = new SpriteBatch(GraphicsDevice);                        
+        _renderer = new TextureRenderer(this.GraphicsDevice);
+        _cpu = new Cpu(_renderer, new DefaultSoundPlayer());
+
+        var romPath = "Content/roms/TETRIS";
+        using var romData = System.IO.File.OpenRead(romPath);
+        int romSize = (int)romData.Length;
+        var buffer = ArrayPool<byte>.Shared.Rent(romSize);
+        try
+        {
+            if (romData.Read(buffer) < 1)
+                throw new ArgumentException($"rom {romPath} is invalid");
+            _cpu.LoadRom(buffer.AsSpan().Slice(0, romSize));
+        }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(buffer);
+        }
+    }
+
+    protected override void Update(GameTime gameTime)
+    {
+        _cpu.Tick();
         
-        private TextureRenderer _renderer;
+        base.Update(gameTime);
+    }
 
-        private readonly Dictionary<MonoKeys, Core.Keys> _keyMappings = new Dictionary<MonoKeys, Keys>() {
-            { MonoKeys.D1, Keys.Number1 },
-            { MonoKeys.D2, Keys.Number2 },
-            { MonoKeys.D3, Keys.Number3 },
-            { MonoKeys.D4, Keys.C },
-            { MonoKeys.Q, Keys.Number4 },
-            { MonoKeys.W, Keys.Number5 },
-            { MonoKeys.E, Keys.Number6 },
-            { MonoKeys.R, Keys.D },
-            { MonoKeys.A, Keys.Number7 },
-            { MonoKeys.S, Keys.Number8 },
-            { MonoKeys.D, Keys.Number9 },
-            { MonoKeys.F, Keys.E },
-            { MonoKeys.Z, Keys.A },
-            { MonoKeys.X, Keys.Number0 },
-            { MonoKeys.C, Keys.B },
-            { MonoKeys.V, Keys.F }
-        };
+    protected override void Draw(GameTime gameTime)
+    {
+        GraphicsDevice.Clear(Color.CornflowerBlue);
 
-        public Game1()
+        _spriteBatch.Begin(samplerState: new SamplerState()
         {
-            _graphics = new GraphicsDeviceManager(this);
+            Filter = TextureFilter.Point
+        });
 
-            Content.RootDirectory = "Content";
-            IsMouseVisible = false;
-        }            
+        _spriteBatch.Draw(_renderer.Texture, this.GraphicsDevice.Viewport.Bounds, Color.White);
 
-        protected override void Initialize()
-        { 
-            base.Initialize();
-            this.Window.KeyDown += Window_KeyDown;
-            this.Window.KeyUp += Window_KeyUp;
-        }
+        _spriteBatch.End();
 
-        private void Window_KeyUp(object sender, InputKeyEventArgs e)
-        {
-            if (_keyMappings.ContainsKey(e.Key))
-                _cpu.SetKeyUp(_keyMappings[e.Key]);
-        }
-
-        private void Window_KeyDown(object sender, InputKeyEventArgs e)
-        {
-            if (_keyMappings.ContainsKey(e.Key))
-                _cpu.SetKeyDown(_keyMappings[e.Key]);
-        }
-
-        protected override void LoadContent()
-        {
-            _spriteBatch = new SpriteBatch(GraphicsDevice);                        
-            _renderer = new TextureRenderer(this.GraphicsDevice, _spriteBatch);
-            _cpu = new Cpu(_renderer, new DefaultSoundPlayer());
-
-            var romPath = "Content/roms/TETRIS";
-            using (var romData = System.IO.File.OpenRead(romPath))
-            {
-                _cpu.LoadAsync(romData).Wait();
-            }
-        }
-
-        protected override void Update(GameTime gameTime)
-        {
-            //if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Microsoft.Xna.Framework.Input.Keys.Escape))
-            //    Exit();
-
-            _cpu.Tick();
-            
-            base.Update(gameTime);
-        }
-
-        protected override void Draw(GameTime gameTime)
-        {
-            GraphicsDevice.Clear(Color.CornflowerBlue);                       
-            
-            _renderer.Render();
-
-            base.Draw(gameTime);
-        }
+        base.Draw(gameTime);
     }
 }

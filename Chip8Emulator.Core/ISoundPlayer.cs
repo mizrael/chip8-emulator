@@ -1,7 +1,6 @@
-﻿namespace Chip8Emulator.Core
+﻿namespace Chip8Emulator.Core;
+
+public interface ISoundPlayer
 {
-    public interface ISoundPlayer
-    {
-        void Beep(int milliseconds);
-    }
+    void Beep(int milliseconds);
 }
