@@ -6,6 +6,8 @@ Roms were downloaded from https://www.zophar.net/pdroms/chip8.html.
 ## Rendering
 I managed to get a [MonoGame version](/Chip8Emulator.MonoGame) up and running along with a [Blazor WASM](Chip8Emulator.BlazorWasm) one as well.
 
+![CHIP-8 Blazor renderer](screenshot_blazor.jpg)
+
 I deployed the Blazor version on Github Pages, you can find it here: https://mizrael.github.io/chip8-emulator/.
 
 The deployment was handled using the approach explained [here](https://www.davidguida.net/how-to-deploy-blazor-webassembly-on-github-pages-using-github-actions/?share=facebook).
