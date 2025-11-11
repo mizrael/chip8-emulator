@@ -1,10 +1,7 @@
 ﻿using Chip8Emulator.Core;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using System;
-using System.Buffers;
 using System.Collections.Generic;
-using System.Linq;
 using Color = Microsoft.Xna.Framework.Color;
 using MonoKeys = Microsoft.Xna.Framework.Input.Keys;
 
