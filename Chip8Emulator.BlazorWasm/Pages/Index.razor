@@ -186,9 +186,8 @@
         this.SetCPUInterval();
         _cpuTickTimer.Elapsed += (s, e) =>
         {
-            // Use elapsed interval as approximate frame delta
             double elapsedSeconds = _tickInterval / 1000.0;
-            _cpu.Update(elapsedSeconds, _instructionsPerSecond, 1);
+            _cpu.Update(elapsedSeconds, _instructionsPerSecond, 1.0 / 60.0);
         };
     }
 

@@ -96,7 +96,6 @@ public class Cpu
         _sp = 0;
     }
 
-    // Execute a single instruction (internal scheduling uses this)
     private void Tick()
     {
         ushort data = (ushort)(_memory[_pc++] << 8 | _memory[_pc++]);
@@ -130,6 +129,7 @@ public class Cpu
 
         _instructionAccumulator += elapsedSeconds;
         double instructionInterval = 1.0 / targetInstructionsPerSecond;
+
         while (_instructionAccumulator >= instructionInterval)
         {
             Tick();
