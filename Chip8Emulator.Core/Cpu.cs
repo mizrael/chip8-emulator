@@ -18,6 +18,10 @@ public class Cpu
     private ushort _i = 0;
     private byte _sp = 0;
     private byte _delay = 0;
+    // Accumulates elapsed time for 60Hz timer updates
+    private double _timerAccumulator = 0.0;
+    // Accumulates elapsed time for instruction scheduling
+    private double _instructionAccumulator = 0.0;
 
     private readonly HashSet<byte> _pressedKeys = new();
 
@@ -92,7 +96,8 @@ public class Cpu
         _sp = 0;
     }
 
-    public void Tick()
+    // Execute a single instruction (internal scheduling uses this)
+    private void Tick()
     {
         ushort data = (ushort)(_memory[_pc++] << 8 | _memory[_pc++]);
         var opCode = new OpCode(data);
@@ -101,9 +106,37 @@ public class Cpu
             throw new NotImplementedException($"instruction '{opCode.Set:X}' not implemented");
 
         instruction(opCode);
+    }
 
-        if (_delay > 0)
-            _delay--;
+    private void UpdateTimers(double elapsedSeconds, double targetFrameInterval)
+    {
+        _timerAccumulator += elapsedSeconds;
+        
+        while (_timerAccumulator >= targetFrameInterval)
+        {
+            if (_delay > 0)
+                _delay--;
+            _timerAccumulator -= targetFrameInterval;
+        }
+    }
+
+    public void Update(
+        double elapsedSeconds, 
+        int targetInstructionsPerSecond,
+        double targetFrameInterval)
+    {
+        if (targetInstructionsPerSecond < 1)
+            targetInstructionsPerSecond = 1;
+
+        _instructionAccumulator += elapsedSeconds;
+        double instructionInterval = 1.0 / targetInstructionsPerSecond;
+        while (_instructionAccumulator >= instructionInterval)
+        {
+            Tick();
+            _instructionAccumulator -= instructionInterval;
+        }
+
+        UpdateTimers(elapsedSeconds, targetFrameInterval);
     }
 
     public void SetKeyDown(Keys key)

@@ -13,7 +13,8 @@ public class Game1 : Game
     private SpriteBatch _spriteBatch;
     private Cpu _cpu;
     private TextureRenderer _renderer;
-    private const int _opsPerFrame = 10;
+    private const int InstructionsPerSecond = 400; 
+    private const double TargetFrameInterval = 1.0 / 60.0;
 
     private readonly Dictionary<MonoKeys, Core.Keys> _keyMappings = new Dictionary<MonoKeys, Keys>() {
         { MonoKeys.D1, Keys.Number1 },
@@ -41,8 +42,7 @@ public class Game1 : Game
         Content.RootDirectory = "Content";
         IsMouseVisible = false;
         IsFixedTimeStep = true;
-
-        TargetElapsedTime = TimeSpan.FromSeconds(1f / 10f);
+        TargetElapsedTime = TimeSpan.FromSeconds(1f / 60f);
     }
 
     protected override void Initialize()
@@ -77,8 +77,10 @@ public class Game1 : Game
 
     protected override void Update(GameTime gameTime)
     {
-        for (int i = 0; i != _opsPerFrame; i++)
-            _cpu.Tick();
+        _cpu.Update(
+            gameTime.ElapsedGameTime.TotalSeconds,
+            InstructionsPerSecond,
+            TargetFrameInterval);
 
         base.Update(gameTime);
     }

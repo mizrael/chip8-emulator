@@ -38,7 +38,8 @@
     Core.Cpu _cpu;
     Core.IRenderer _renderer;
     System.Timers.Timer _cpuTickTimer;
-    int _tickInterval = 10;
+    int _tickInterval = 10; // milliseconds
+    int _instructionsPerSecond = 400; // default IPS for web
 
     string[] _roms = new[]{
         "15PUZZLE",
@@ -185,7 +186,9 @@
         this.SetCPUInterval();
         _cpuTickTimer.Elapsed += (s, e) =>
         {
-            _cpu.Tick();
+            // Use elapsed interval as approximate frame delta
+            double elapsedSeconds = _tickInterval / 1000.0;
+            _cpu.Update(elapsedSeconds, _instructionsPerSecond, 1);
         };
     }
 
