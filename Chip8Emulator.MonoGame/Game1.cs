@@ -1,6 +1,7 @@
 ﻿using Chip8Emulator.Core;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using System;
 using System.Collections.Generic;
 using Color = Microsoft.Xna.Framework.Color;
 using MonoKeys = Microsoft.Xna.Framework.Input.Keys;
@@ -9,12 +10,10 @@ namespace Chip8Emulator.MonoGame;
 
 public class Game1 : Game
 {
-    private GraphicsDeviceManager _graphics;
     private SpriteBatch _spriteBatch;
-
     private Cpu _cpu;
-    
     private TextureRenderer _renderer;
+    private const int _opsPerFrame = 10;
 
     private readonly Dictionary<MonoKeys, Core.Keys> _keyMappings = new Dictionary<MonoKeys, Keys>() {
         { MonoKeys.D1, Keys.Number1 },
@@ -37,14 +36,17 @@ public class Game1 : Game
 
     public Game1()
     {
-        _graphics = new GraphicsDeviceManager(this);
+        var _ = new GraphicsDeviceManager(this);
 
         Content.RootDirectory = "Content";
         IsMouseVisible = false;
-    }            
+        IsFixedTimeStep = true;
+
+        TargetElapsedTime = TimeSpan.FromSeconds(1f / 10f);
+    }
 
     protected override void Initialize()
-    { 
+    {
         base.Initialize();
         this.Window.KeyDown += Window_KeyDown;
         this.Window.KeyUp += Window_KeyUp;
@@ -75,8 +77,9 @@ public class Game1 : Game
 
     protected override void Update(GameTime gameTime)
     {
-        _cpu.Tick();
-        
+        for (int i = 0; i != _opsPerFrame; i++)
+            _cpu.Tick();
+
         base.Update(gameTime);
     }
 

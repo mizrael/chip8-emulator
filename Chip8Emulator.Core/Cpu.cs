@@ -9,16 +9,16 @@ public class Cpu
 {
     #region members
 
-    private readonly byte[] _memory = new byte[0x1000];        
+    private readonly byte[] _memory = new byte[0x1000];
     private readonly byte[] _v = new byte[16];
     private readonly ushort[] _stack = new ushort[16];
     private readonly bool[,] _screen = new bool[Constants.SCREEN_WIDTH, Constants.SCREEN_HEIGHT];
 
     private ushort _pc = Constants.ROM_START_LOCATION;
     private ushort _i = 0;
-    private byte _sp = 0; 
+    private byte _sp = 0;
     private byte _delay = 0;
-            
+
     private readonly HashSet<byte> _pressedKeys = new();
 
     private readonly Dictionary<byte, Action<OpCode>> _instructions = new();
@@ -54,7 +54,7 @@ public class Cpu
         _miscInstructions[0x33] = this.SetBCD;
         _miscInstructions[0x29] = this.SetIToCharSprite;
         _miscInstructions[0x18] = this.PlaySound;
-        
+
         _renderer = renderer;
         _soundPlayer = soundPlayer;
     }
@@ -81,8 +81,8 @@ public class Cpu
     {
         Array.Clear(_v);
         Array.Clear(_stack);
-        Array.Clear(_screen); 
-        
+        Array.Clear(_screen);
+
         Array.Clear(_memory);
         for (var i = 0; i != Font.Characters.Length; ++i)
             _memory[i] = Font.Characters[i];
@@ -99,7 +99,7 @@ public class Cpu
 
         if (!_instructions.TryGetValue(opCode.Set, out var instruction))
             throw new NotImplementedException($"instruction '{opCode.Set:X}' not implemented");
-            
+
         instruction(opCode);
 
         if (_delay > 0)
@@ -107,10 +107,10 @@ public class Cpu
     }
 
     public void SetKeyDown(Keys key)
-        =>_pressedKeys.Add((byte)key);        
+        => _pressedKeys.Add((byte)key);
 
     public void SetKeyUp(Keys key)
-        =>_pressedKeys.Remove((byte)key);
+        => _pressedKeys.Remove((byte)key);
 
     #region instructions
 
@@ -123,7 +123,7 @@ public class Cpu
     // 0x1NNN
     private void Jump(OpCode opCode)
     {
-        _pc = opCode.NNN; 
+        _pc = opCode.NNN;
     }
 
     // 0x6XNN
@@ -139,7 +139,7 @@ public class Cpu
         bool carry = result > 255;
         if (carry)
             result = result - 256;
-        
+
         _v[opCode.X] = (byte)(result & 0x00FF);
     }
 
@@ -170,52 +170,54 @@ public class Cpu
         byte carry = 0;
         bool updateRenderer = false;
 
-        for(byte row = 0; row < rows; row++)
+        for (byte row = 0; row < rows; row++)
         {
-            byte rowData = _memory[_i + row];
-            int py = (startY + row) % Constants.SCREEN_HEIGHT;
+            var rowData = _memory[_i + row];
+            var py = (startY + row) % Constants.SCREEN_HEIGHT;
 
             for (byte col = 0; col != 8; col++)
             {
-                int px = (startX + col) % Constants.SCREEN_WIDTH;
-                byte oldPixel = (byte)(_screen[px, py] ? 1 : 0);
-                byte spritePixel = (byte)((rowData >> (7 - col)) & 1);
-
-                byte newPixel = (byte)(oldPixel ^ spritePixel);
+                var px = (startX + col) % Constants.SCREEN_WIDTH;
+                var oldPixel = (byte)(_screen[px, py] ? 1 : 0);
+                var spritePixel = (byte)((rowData >> (7 - col)) & 1);
 
                 if (oldPixel != spritePixel)
                     updateRenderer = true;
-
+                
+                var newPixel = (byte)(oldPixel ^ spritePixel);
                 _screen[px, py] = (newPixel != 0);
 
                 if (oldPixel == 1 && spritePixel == 1)
                     carry = 1;
-            }                
+            }
         }
 
         _v[0xF] = carry;
-        
-        if(updateRenderer)
+
+        if (updateRenderer)
             _renderer.Draw(_screen);
     }
 
-    private void Misc(OpCode opCode){
+    private void Misc(OpCode opCode)
+    {
         if (!_miscInstructions.TryGetValue(opCode.NN, out var instruction))
-            throw new NotImplementedException($"instruction '0xF{opCode.NN:X}' not implemented");
-            
+            throw new NotImplementedException($"misc instruction '0xF{opCode.NN:X}' not implemented");
+
         instruction(opCode);
     }
 
     // 0x3XNN
-    private void SkipVxEqNN(OpCode opCode){
-        if(_v[opCode.X] == opCode.NN)
-            _pc+=2;
+    private void SkipVxEqNN(OpCode opCode)
+    {
+        if (_v[opCode.X] == opCode.NN)
+            _pc += 2;
     }
 
     // 0x4XNN
-    private void SkipVxNeqNN(OpCode opCode){
-        if(_v[opCode.X] != opCode.NN)
-            _pc+=2;
+    private void SkipVxNeqNN(OpCode opCode)
+    {
+        if (_v[opCode.X] != opCode.NN)
+            _pc += 2;
     }
 
     // 0x9XY0
@@ -226,21 +228,24 @@ public class Cpu
     }
 
     // 0x2NNN
-    private void Call(OpCode opCode){
+    private void Call(OpCode opCode)
+    {
         Push(_pc);
         _pc = opCode.NNN;
     }
 
-    void Push(ushort value) =>
-	        _stack[_sp++] = value;    
+    void Push(ushort value)
+    => _stack[_sp++] = value;
 
-    ushort Pop() => 
-	        _stack[--_sp];
+    ushort Pop()
+    => _stack[--_sp];
 
-    private void ZeroOps(OpCode opCode){
-        switch(opCode.NN){
+    private void ZeroOps(OpCode opCode)
+    {
+        switch (opCode.NN)
+        {
             case 0xE0:
-                Array.Clear(_screen, 0, _screen.Length); 
+                Array.Clear(_screen, 0, _screen.Length);
                 break;
             case 0xEE:
                 _pc = Pop();
@@ -250,13 +255,15 @@ public class Cpu
         }
     }
 
-    private void XYOps(OpCode opCode){
-        switch(opCode.N){
+    private void XYOps(OpCode opCode)
+    {
+        switch (opCode.N)
+        {
             case 0x0:
                 _v[opCode.X] = _v[opCode.Y];
                 break;
             case 0x1:
-                _v[opCode.X] |= _v[opCode.Y]; 
+                _v[opCode.X] |= _v[opCode.Y];
                 break;
             case 0x2:
                 _v[opCode.X] &= _v[opCode.Y];
@@ -287,18 +294,17 @@ public class Cpu
         }
     }
 
-    private void SkipOnKey(OpCode opCode){
-        switch(opCode.NN){
+    // 0xE
+    private void SkipOnKey(OpCode opCode)
+    {
+        switch (opCode.NN)
+        {
             case 0x9E:
-                if(_pressedKeys.Contains(_v[opCode.X]))
-                    _pc +=2;
+                _pc += (ushort)(_pressedKeys.Contains(_v[opCode.X]) ? 2 : 0);
                 break;
             case 0xA1:
-                if(!_pressedKeys.Contains(_v[opCode.X]))
-                    _pc +=2;
+                _pc += (ushort)(!_pressedKeys.Contains(_v[opCode.X]) ? 2 : 0);
                 break;
-            default:
-                throw new NotImplementedException($"instruction '0xEX{opCode.NN:X}' not implemented");
         }
     }
 
@@ -307,22 +313,26 @@ public class Cpu
     #region misc instructions
 
     //0xFX1E
-    private void AddVRegToI(OpCode opCode){
+    private void AddVRegToI(OpCode opCode)
+    {
         _i += _v[opCode.X];
     }
 
     //0xFX65
-    private void FillVFromMI(OpCode opCode){
-        for(byte i=0;i<=opCode.X;++i)
-            _v[i] = _memory[_i+i];
+    private void FillVFromMI(OpCode opCode)
+    {
+        for (byte i = 0; i <= opCode.X; ++i)
+            _v[i] = _memory[_i + i];
     }
 
-    private void SetDelay(OpCode opCode){
+    private void SetDelay(OpCode opCode)
+    {
         _delay = _v[opCode.X];
     }
 
     //0xFX07
-    private void GetDelay(OpCode opCode){
+    private void GetDelay(OpCode opCode)
+    {
         _v[opCode.X] = _delay;
     }
 
@@ -330,9 +340,12 @@ public class Cpu
     private void WaitKey(OpCode opCode)
     {
         if (_pressedKeys.Count == 0)
+        {
             _pc -= 2;
-        else
-            _v[opCode.X] = _pressedKeys.First();
+            return;
+        }
+
+        _v[opCode.X] = _pressedKeys.First();
     }
 
     //0xFX33
@@ -346,8 +359,8 @@ public class Cpu
 
     //0xFX29
     private void SetIToCharSprite(OpCode opCode)
-    {            
-        _i = (ushort)(_v[opCode.X] * 5); 
+    {
+        _i = (ushort)(_v[opCode.X] * 5);
     }
 
     // 0xFX18
