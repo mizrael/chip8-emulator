@@ -12,6 +12,8 @@ public class Game1 : Game
 {
     private SpriteBatch _spriteBatch;
     private Cpu _cpu;
+    private Mem _memory;
+    private Registers _registers;
     private TextureRenderer _renderer;
     private const int InstructionsPerSecond = 400; 
     private const double TargetFrameInterval = 1.0 / 60.0;
@@ -70,14 +72,19 @@ public class Game1 : Game
         _renderer = new TextureRenderer(this.GraphicsDevice);
         _cpu = new Cpu(_renderer, new DefaultSoundPlayer());
 
+        _memory = new Mem();
+        _registers = new Registers();
+
         var romPath = "Content/roms/TETRIS";
         using var romData = System.IO.File.OpenRead(romPath);
-        _cpu.LoadRom(romData);
+        _memory.LoadRom(romData);
     }
 
     protected override void Update(GameTime gameTime)
     {
         _cpu.Update(
+            _registers,
+            _memory,
             gameTime.ElapsedGameTime.TotalSeconds,
             InstructionsPerSecond,
             TargetFrameInterval);
