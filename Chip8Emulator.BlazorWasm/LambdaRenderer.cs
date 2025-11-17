@@ -1,6 +1,7 @@
-﻿using System;
+﻿using Chip8Emulator.Core;
+using System;
 
-namespace Chip8Emulator.Core;
+namespace Chip8Emulator.BlazorWasm;
 
 public class LambdaRenderer : IRenderer
 {

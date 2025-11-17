@@ -35,7 +35,10 @@
     int _canvasWidth = 800;
     int _canvasHeight = 400;
 
-    Core.Cpu _cpu;
+    Cpu _cpu;
+    Buffers _memory;
+    Registers _registers;
+    Input _input;
     Core.IRenderer _renderer;
     System.Timers.Timer _cpuTickTimer;
     int _tickInterval = 10; // milliseconds
@@ -103,7 +106,7 @@
         }
 
         using var romData = await response.Content.ReadAsStreamAsync();
-        _cpu.LoadRom(romData);
+        _memory.LoadRom(romData);
 
         _cpuTickTimer.Enabled = true;
     }
@@ -179,27 +182,30 @@
             OnCanvasReadyAsync = this.OnOffscreenCanvasReady
         });
 
-        _renderer = new Chip8Emulator.Core.LambdaRenderer(data => UpdateFrame(data));
-        _cpu = new Core.Cpu(_renderer, new Chip8Emulator.Core.DefaultSoundPlayer());
+        _input = new Input();
+        _registers = new Registers();
+        _memory = new Buffers();
+        _renderer = new LambdaRenderer(data => UpdateFrame(data));
+        _cpu = new Cpu(_renderer, new Chip8Emulator.Core.DefaultSoundPlayer(), _input, new Clock());
 
         _cpuTickTimer = new System.Timers.Timer();
         this.SetCPUInterval();
         _cpuTickTimer.Elapsed += (s, e) =>
         {
             double elapsedSeconds = _tickInterval / 1000.0;
-            _cpu.Update(elapsedSeconds, _instructionsPerSecond, 1.0 / 60.0);
+            _cpu.Update(_registers, _memory, elapsedSeconds, _instructionsPerSecond);
         };
     }
 
     public void OnKeyDown(KeyboardPressEvent evt)
     {
         if (_keyMappings.ContainsKey(evt.KeyCode))
-            _cpu.SetKeyDown(_keyMappings[evt.KeyCode]);
+            _input.SetKeyDown(_keyMappings[evt.KeyCode]);
     }
 
     public void OnKeyUp(KeyboardPressEvent evt)
     {
         if (_keyMappings.ContainsKey(evt.KeyCode))
-            _cpu.SetKeyUp(_keyMappings[evt.KeyCode]);
+            _input.SetKeyUp(_keyMappings[evt.KeyCode]);
     }
 }

@@ -9,7 +9,6 @@ public record Registers
     public ushort PC { get; set; } = Constants.ROM_START_LOCATION;
     public byte SP { get; set; }
     public ushort[] Stack { get; } = new ushort[16];
-    public byte Delay { get; set; }
 
     public OpCode GetCurrentOp(Buffers memory)
     {
@@ -26,6 +25,5 @@ public record Registers
         this.PC = Constants.ROM_START_LOCATION;
         this.I = 0;
         this.SP = 0;
-        this.Delay = 0;
     }
 }

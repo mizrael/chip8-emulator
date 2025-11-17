@@ -7,19 +7,17 @@ public class Cpu
 {
     #region members
 
-    private double _timerAccumulator = 0.0;
-    private double _instructionAccumulator = 0.0;
-
     private readonly Dictionary<byte, Action<Registers, Buffers, OpCode>> _instructions = new();
     private readonly Dictionary<byte, Action<Registers, Buffers, OpCode>> _miscInstructions = new();
 
     private readonly IRenderer _renderer;
     private readonly ISoundPlayer _soundPlayer;
     private readonly Input _input;
+    private readonly Clock _clock;
 
     #endregion members
 
-    public Cpu(IRenderer renderer, ISoundPlayer soundPlayer, Input input)
+    public Cpu(IRenderer renderer, ISoundPlayer soundPlayer, Input input, Clock clock)
     {
         _instructions[0x0] = this.ZeroOps;
         _instructions[0x1] = this.Jump;
@@ -48,6 +46,7 @@ public class Cpu
         _renderer = renderer;
         _soundPlayer = soundPlayer;
         _input = input;
+        _clock = clock;
     }
 
     private void ExecuteCurrentInstruction(Registers registers, Buffers memory)
@@ -60,43 +59,15 @@ public class Cpu
         instruction(registers, memory, opCode);
     }
 
-    private void UpdateTimers(
-        Registers registers,
-        double elapsedSeconds,
-        double targetFrameInterval)
-    {
-        _timerAccumulator += elapsedSeconds;
-
-        while (_timerAccumulator >= targetFrameInterval)
-        {
-            _timerAccumulator -= targetFrameInterval;
-
-            if (registers.Delay > 0)
-                registers.Delay--;
-        }
-    }
-
     public void Update(
         Registers registers,
         Buffers memory,
         double elapsedSeconds,
-        int targetInstructionsPerSecond,
-        double targetFrameInterval)
+        int targetInstructionsPerSecond)
     {
-        if (targetInstructionsPerSecond < 1)
-            targetInstructionsPerSecond = 1;
+        var onTick = () => this.ExecuteCurrentInstruction(registers, memory);
 
-        _instructionAccumulator += elapsedSeconds;
-        double instructionInterval = 1.0 / targetInstructionsPerSecond;
-
-        while (_instructionAccumulator >= instructionInterval)
-        {
-            _instructionAccumulator -= instructionInterval;
-
-            ExecuteCurrentInstruction(registers, memory);
-        }
-
-        UpdateTimers(registers, elapsedSeconds, targetFrameInterval);
+        _clock.Update(onTick, elapsedSeconds, targetInstructionsPerSecond);
     }
 
     #region instructions
@@ -314,13 +285,13 @@ public class Cpu
 
     private void SetDelay(Registers registers, Buffers memory, OpCode opCode)
     {
-        registers.Delay = registers.V[opCode.X];
+        _clock.Delay = registers.V[opCode.X];
     }
 
     //0xFX07
     private void GetDelay(Registers registers, Buffers memory, OpCode opCode)
     {
-        registers.V[opCode.X] = registers.Delay;
+        registers.V[opCode.X] = _clock.Delay;
     }
 
     //0xFX0A

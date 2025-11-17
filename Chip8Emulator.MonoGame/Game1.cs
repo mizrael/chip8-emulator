@@ -19,7 +19,6 @@ public class Game1 : Game
     private Input _input;
 
     private const int InstructionsPerSecond = 400; 
-    private const double TargetFrameInterval = 1.0 / 60.0;
 
     private readonly Dictionary<MonoKeys, Core.Keys> _keyMappings = new Dictionary<MonoKeys, Keys>() {
         { MonoKeys.D1, Keys.Number1 },
@@ -77,9 +76,9 @@ public class Game1 : Game
 
         _spriteBatch = new SpriteBatch(GraphicsDevice);
         _renderer = new TextureRenderer(this.GraphicsDevice);
-        _cpu = new Cpu(_renderer, new DefaultSoundPlayer(), _input);
+        _cpu = new Cpu(_renderer, new DefaultSoundPlayer(), _input, new Clock());
 
-        var romPath = "Content/roms/TETRIS";
+        var romPath = "Content/roms/PONG";
         using var romData = System.IO.File.OpenRead(romPath);
         _memory.LoadRom(romData);
     }
@@ -90,8 +89,7 @@ public class Game1 : Game
             _registers,
             _memory,
             gameTime.ElapsedGameTime.TotalSeconds,
-            InstructionsPerSecond,
-            TargetFrameInterval);
+            InstructionsPerSecond);
 
         base.Update(gameTime);
     }
