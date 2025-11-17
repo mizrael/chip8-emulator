@@ -11,10 +11,13 @@ namespace Chip8Emulator.MonoGame;
 public class Game1 : Game
 {
     private SpriteBatch _spriteBatch;
-    private Cpu _cpu;
-    private Mem _memory;
-    private Registers _registers;
     private TextureRenderer _renderer;
+
+    private Cpu _cpu;
+    private Buffers _memory;
+    private Registers _registers;
+    private Input _input;
+
     private const int InstructionsPerSecond = 400; 
     private const double TargetFrameInterval = 1.0 / 60.0;
 
@@ -57,23 +60,24 @@ public class Game1 : Game
     private void Window_KeyUp(object sender, InputKeyEventArgs e)
     {
         if (_keyMappings.ContainsKey(e.Key))
-            _cpu.SetKeyUp(_keyMappings[e.Key]);
+            _input.SetKeyUp(_keyMappings[e.Key]);
     }
 
     private void Window_KeyDown(object sender, InputKeyEventArgs e)
     {
         if (_keyMappings.ContainsKey(e.Key))
-            _cpu.SetKeyDown(_keyMappings[e.Key]);
+            _input.SetKeyDown(_keyMappings[e.Key]);
     }
 
     protected override void LoadContent()
     {
+        _memory = new Buffers();
+        _registers = new Registers();
+        _input = new Input();
+
         _spriteBatch = new SpriteBatch(GraphicsDevice);
         _renderer = new TextureRenderer(this.GraphicsDevice);
-        _cpu = new Cpu(_renderer, new DefaultSoundPlayer());
-
-        _memory = new Mem();
-        _registers = new Registers();
+        _cpu = new Cpu(_renderer, new DefaultSoundPlayer(), _input);
 
         var romPath = "Content/roms/TETRIS";
         using var romData = System.IO.File.OpenRead(romPath);
