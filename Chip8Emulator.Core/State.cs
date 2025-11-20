@@ -6,7 +6,6 @@ public record State
     public Memory Memory { get; } = new();
     public Screen Screen { get; } = new();
 
-
     public OpCode GetCurrentOp()
     {
         ushort data = (ushort)(this.Memory[this.Registers.PC++] << 8 | this.Memory[this.Registers.PC++]);

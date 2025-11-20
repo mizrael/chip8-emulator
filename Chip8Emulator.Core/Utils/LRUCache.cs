@@ -64,13 +64,14 @@ public class LRUCache<TKey, TValue>
     {
         if (_cache.Count == _capacity)
         {
-            _cache.Remove(_tail.Key);
+            if (_tail is not null)
+            {
+                _cache.Remove(_tail.Key);
 
+                _tail = _tail.Previous;
+            }
 
-            _tail = _tail.Previous;
-
-            if (_tail != null)
-                _tail.Next = null;
+            _tail?.Next = null;
         }
 
         var node = new Node { Key = key, Value = value, Next = _head };

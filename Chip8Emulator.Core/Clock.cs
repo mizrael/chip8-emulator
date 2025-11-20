@@ -43,7 +43,7 @@ public class Clock
 
         while (_timerAccumulator >= delayRefreshRate)
         {
-            _timerAccumulator = 0;
+            _timerAccumulator -= delayRefreshRate;
 
             if (this.Delay > 0)
                 this.Delay--;

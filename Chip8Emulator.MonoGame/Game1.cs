@@ -76,7 +76,7 @@ public class Game1 : Game
         _renderer = new TextureRenderer(this.GraphicsDevice);
         _cpu = new Cpu(_renderer, new DefaultSoundPlayer(), _input, new Clock());
 
-        var romPath = "Content/roms/PONG";
+        var romPath = "Content/roms/TETRIS";
         using var romData = System.IO.File.OpenRead(romPath);
         _state.Memory.LoadRom(romData);
     }

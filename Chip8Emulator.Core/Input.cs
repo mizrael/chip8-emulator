@@ -1,8 +1,5 @@
 ﻿using Chip8Emulator.Core.Utils;
 using System;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Chip8Emulator.Core;
 
