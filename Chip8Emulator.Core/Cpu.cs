@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Buffers;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace Chip8Emulator.Core;
 
@@ -9,31 +7,17 @@ public class Cpu
 {
     #region members
 
-    private readonly byte[] _memory = new byte[0x1000];
-    private readonly byte[] _v = new byte[16];
-    private readonly ushort[] _stack = new ushort[16];
-    private readonly bool[,] _screen = new bool[Constants.SCREEN_WIDTH, Constants.SCREEN_HEIGHT];
-
-    private ushort _pc = Constants.ROM_START_LOCATION;
-    private ushort _i = 0;
-    private byte _sp = 0;
-    private byte _delay = 0;
-    // Accumulates elapsed time for 60Hz timer updates
-    private double _timerAccumulator = 0.0;
-    // Accumulates elapsed time for instruction scheduling
-    private double _instructionAccumulator = 0.0;
-
-    private readonly HashSet<byte> _pressedKeys = new();
-
-    private readonly Dictionary<byte, Action<OpCode>> _instructions = new();
-    private readonly Dictionary<byte, Action<OpCode>> _miscInstructions = new();
+    private readonly Dictionary<byte, Action<State, OpCode>> _instructions = new();
+    private readonly Dictionary<byte, Action<State, OpCode>> _miscInstructions = new();
 
     private readonly IRenderer _renderer;
     private readonly ISoundPlayer _soundPlayer;
+    private readonly Input _input;
+    private readonly Clock _clock;
 
     #endregion members
 
-    public Cpu(IRenderer renderer, ISoundPlayer soundPlayer)
+    public Cpu(IRenderer renderer, ISoundPlayer soundPlayer, Input input, Clock clock)
     {
         _instructions[0x0] = this.ZeroOps;
         _instructions[0x1] = this.Jump;
@@ -61,125 +45,65 @@ public class Cpu
 
         _renderer = renderer;
         _soundPlayer = soundPlayer;
+        _input = input;
+        _clock = clock;
     }
 
-    public void LoadRom(ReadOnlySpan<byte> romData)
+    private void ExecuteCurrentInstruction(State state)
     {
-        Reset();
-
-        romData.CopyTo(_memory.AsSpan(Constants.ROM_START_LOCATION));
-    }
-
-    public void LoadRom(System.IO.Stream romData)
-    {
-        Reset();
-
-        int romSize = (int)romData.Length;
-
-        var dest = _memory.AsSpan(Constants.ROM_START_LOCATION);
-        if (romData.Read(dest) < 1)
-            throw new ArgumentException("input stream is invalid");
-    }
-
-    public void Reset()
-    {
-        Array.Clear(_v);
-        Array.Clear(_stack);
-        Array.Clear(_screen);
-
-        Array.Clear(_memory);
-        for (var i = 0; i != Font.Characters.Length; ++i)
-            _memory[i] = Font.Characters[i];
-
-        _pc = Constants.ROM_START_LOCATION;
-        _i = 0;
-        _sp = 0;
-    }
-
-    private void Tick()
-    {
-        ushort data = (ushort)(_memory[_pc++] << 8 | _memory[_pc++]);
-        var opCode = new OpCode(data);
+        var opCode = state.GetCurrentOp();
 
         if (!_instructions.TryGetValue(opCode.Set, out var instruction))
             throw new NotImplementedException($"instruction '{opCode.Set:X}' not implemented");
 
-        instruction(opCode);
-    }
-
-    private void UpdateTimers(double elapsedSeconds, double targetFrameInterval)
-    {
-        _timerAccumulator += elapsedSeconds;
-        
-        while (_timerAccumulator >= targetFrameInterval)
-        {
-            if (_delay > 0)
-                _delay--;
-            _timerAccumulator -= targetFrameInterval;
-        }
+        instruction(state, opCode);
     }
 
     public void Update(
-        double elapsedSeconds, 
-        int targetInstructionsPerSecond,
-        double targetFrameInterval)
+        State state,
+        double elapsedSeconds,
+        int targetInstructionsPerSecond)
     {
-        if (targetInstructionsPerSecond < 1)
-            targetInstructionsPerSecond = 1;
+        var onTick = () => this.ExecuteCurrentInstruction(state);
 
-        _instructionAccumulator += elapsedSeconds;
-        double instructionInterval = 1.0 / targetInstructionsPerSecond;
-
-        while (_instructionAccumulator >= instructionInterval)
-        {
-            Tick();
-            _instructionAccumulator -= instructionInterval;
-        }
-
-        UpdateTimers(elapsedSeconds, targetFrameInterval);
+        _clock.Update(onTick, elapsedSeconds, targetInstructionsPerSecond);
     }
-
-    public void SetKeyDown(Keys key)
-        => _pressedKeys.Add((byte)key);
-
-    public void SetKeyUp(Keys key)
-        => _pressedKeys.Remove((byte)key);
 
     #region instructions
 
     // 0xCXNN
-    private void Rand(OpCode opCode)
+    private void Rand(State state, OpCode opCode)
     {
-        _v[opCode.X] = (byte)(Random.Shared.Next(0, 255) & opCode.NN);
+        state.Registers.V[opCode.X] = (byte)(Random.Shared.Next(0, 255) & opCode.NN);
     }
 
     // 0x1NNN
-    private void Jump(OpCode opCode)
+    private void Jump(State state, OpCode opCode)
     {
-        _pc = opCode.NNN;
+        state.Registers.PC = opCode.NNN;
     }
 
     // 0x6XNN
-    private void SetVReg(OpCode opCode)
+    private void SetVReg(State state, OpCode opCode)
     {
-        _v[opCode.X] = opCode.NN;
+        state.Registers.V[opCode.X] = opCode.NN;
     }
 
     // 0x7XNN
-    private void AddVReg(OpCode opCode)
+    private void AddVReg(State state, OpCode opCode)
     {
-        int result = _v[opCode.X] + opCode.NN;
+        int result = state.Registers.V[opCode.X] + opCode.NN;
         bool carry = result > 255;
         if (carry)
             result = result - 256;
 
-        _v[opCode.X] = (byte)(result & 0x00FF);
+        state.Registers.V[opCode.X] = (byte)(result & 0x00FF);
     }
 
     // 0xANNN
-    private void SetI(OpCode opCode)
+    private void SetI(State state, OpCode opCode)
     {
-        _i = opCode.NNN;
+        state.Registers.I = opCode.NNN;
     }
 
     /// <summary>
@@ -195,132 +119,132 @@ public class Cpu
     /// from set to unset when a sprite is drawn and set to 0 otherwise. 
     /// </summary>
     /// <param name="opCode"></param>
-    private void Draw(OpCode opCode)
+    private void Draw(State state, OpCode opCode)
     {
-        var startX = _v[opCode.X];
-        var startY = _v[opCode.Y];
+        var startX = state.Registers.V[opCode.X];
+        var startY = state.Registers.V[opCode.Y];
         var rows = opCode.N;
         byte carry = 0;
         bool updateRenderer = false;
 
         for (byte row = 0; row < rows; row++)
         {
-            var rowData = _memory[_i + row];
+            var rowData = state.Memory[state.Registers.I + row];
             var py = (startY + row) % Constants.SCREEN_HEIGHT;
 
             for (byte col = 0; col != 8; col++)
             {
                 var px = (startX + col) % Constants.SCREEN_WIDTH;
-                var oldPixel = (byte)(_screen[px, py] ? 1 : 0);
+                var oldPixel = (byte)(state.Screen[px, py] ? 1 : 0);
                 var spritePixel = (byte)((rowData >> (7 - col)) & 1);
 
                 if (oldPixel != spritePixel)
                     updateRenderer = true;
-                
+
                 var newPixel = (byte)(oldPixel ^ spritePixel);
-                _screen[px, py] = (newPixel != 0);
+                state.Screen[px, py] = (newPixel != 0);
 
                 if (oldPixel == 1 && spritePixel == 1)
                     carry = 1;
             }
         }
 
-        _v[0xF] = carry;
+        state.Registers.V[0xF] = carry;
 
         if (updateRenderer)
-            _renderer.Draw(_screen);
+            _renderer.Draw(state.Screen);
     }
 
-    private void Misc(OpCode opCode)
+    private void Misc(State state, OpCode opCode)
     {
         if (!_miscInstructions.TryGetValue(opCode.NN, out var instruction))
             throw new NotImplementedException($"misc instruction '0xF{opCode.NN:X}' not implemented");
 
-        instruction(opCode);
+        instruction(state, opCode);
     }
 
     // 0x3XNN
-    private void SkipVxEqNN(OpCode opCode)
+    private void SkipVxEqNN(State state, OpCode opCode)
     {
-        if (_v[opCode.X] == opCode.NN)
-            _pc += 2;
+        if (state.Registers.V[opCode.X] == opCode.NN)
+            state.Registers.PC += 2;
     }
 
     // 0x4XNN
-    private void SkipVxNeqNN(OpCode opCode)
+    private void SkipVxNeqNN(State state, OpCode opCode)
     {
-        if (_v[opCode.X] != opCode.NN)
-            _pc += 2;
+        if (state.Registers.V[opCode.X] != opCode.NN)
+            state.Registers.PC += 2;
     }
 
     // 0x9XY0
-    private void SkipVxNeqVy(OpCode opCode)
+    private void SkipVxNeqVy(State state, OpCode opCode)
     {
-        if (_v[opCode.X] != _v[opCode.Y])
-            _pc += 2;
+        if (state.Registers.V[opCode.X] != state.Registers.V[opCode.Y])
+            state.Registers.PC += 2;
     }
 
     // 0x2NNN
-    private void Call(OpCode opCode)
+    private void Call(State state, OpCode opCode)
     {
-        Push(_pc);
-        _pc = opCode.NNN;
+        Push(state.Registers, state.Registers.PC);
+        state.Registers.PC = opCode.NNN;
     }
 
-    void Push(ushort value)
-    => _stack[_sp++] = value;
+    private void Push(Registers registers, ushort value)
+    => registers.Stack[registers.SP++] = value;
 
-    ushort Pop()
-    => _stack[--_sp];
+    private ushort Pop(Registers registers)
+    => registers.Stack[--registers.SP];
 
-    private void ZeroOps(OpCode opCode)
+    private void ZeroOps(State state, OpCode opCode)
     {
         switch (opCode.NN)
         {
             case 0xE0:
-                Array.Clear(_screen, 0, _screen.Length);
+                state.Screen.Reset();
                 break;
             case 0xEE:
-                _pc = Pop();
+                state.Registers.PC = Pop(state.Registers);
                 break;
             default:
                 throw new NotImplementedException($"instruction '0x0{opCode.NN:X}' not implemented");
         }
     }
 
-    private void XYOps(OpCode opCode)
+    private void XYOps(State state, OpCode opCode)
     {
         switch (opCode.N)
         {
             case 0x0:
-                _v[opCode.X] = _v[opCode.Y];
+                state.Registers.V[opCode.X] = state.Registers.V[opCode.Y];
                 break;
             case 0x1:
-                _v[opCode.X] |= _v[opCode.Y];
+                state.Registers.V[opCode.X] |= state.Registers.V[opCode.Y];
                 break;
             case 0x2:
-                _v[opCode.X] &= _v[opCode.Y];
+                state.Registers.V[opCode.X] &= state.Registers.V[opCode.Y];
                 break;
             case 0x3:
-                _v[opCode.X] ^= _v[opCode.Y];
+                state.Registers.V[opCode.X] ^= state.Registers.V[opCode.Y];
                 break;
             case 0x4:
-                var res = _v[opCode.X] + _v[opCode.Y];
+                var res = state.Registers.V[opCode.X] + state.Registers.V[opCode.Y];
                 var carry = res > 255;
-                _v[opCode.X] = (byte)res;
-                _v[0xF] = (byte)(carry ? 1 : 0);
+                state.Registers.V[opCode.X] = (byte)res;
+                state.Registers.V[0xF] = (byte)(carry ? 1 : 0);
                 break;
             case 0x5:
-                _v[0xF] = (byte)(_v[opCode.X] > _v[opCode.Y] ? 1 : 0);
-                _v[opCode.X] -= _v[opCode.Y];
+                state.Registers.V[0xF] = (byte)(state.Registers.V[opCode.X] > state.Registers.V[opCode.Y] ? 1 : 0);
+                state.Registers.V[opCode.X] -= state.Registers.V[opCode.Y];
                 break;
             case 0x6:
-                _v[0xF] = (byte)((_v[opCode.X] & 0x1) == 1 ? 1 : 0);
-                _v[opCode.X] >>= 1;
+                state.Registers.V[0xF] = (byte)((state.Registers.V[opCode.X] & 0x1) == 1 ? 1 : 0);
+                state.Registers.V[opCode.X] >>= 1;
                 break;
             case 0x7:
-                _v[0xF] = (byte)(_v[opCode.Y] > _v[opCode.X] ? 1 : 0);
-                _v[opCode.X] = (byte)(_v[opCode.Y] - _v[opCode.X]);
+                state.Registers.V[0xF] = (byte)(state.Registers.V[opCode.Y] > state.Registers.V[opCode.X] ? 1 : 0);
+                state.Registers.V[opCode.X] = (byte)(state.Registers.V[opCode.Y] - state.Registers.V[opCode.X]);
                 break;
             default:
                 throw new NotImplementedException($"instruction '0x8XY{opCode.N:X}' not implemented");
@@ -328,15 +252,15 @@ public class Cpu
     }
 
     // 0xE
-    private void SkipOnKey(OpCode opCode)
+    private void SkipOnKey(State state, OpCode opCode)
     {
         switch (opCode.NN)
         {
             case 0x9E:
-                _pc += (ushort)(_pressedKeys.Contains(_v[opCode.X]) ? 2 : 0);
+                state.Registers.PC += (ushort)(_input.IsKeyPressed((Keys)state.Registers.V[opCode.X]) ? 2 : 0);
                 break;
             case 0xA1:
-                _pc += (ushort)(!_pressedKeys.Contains(_v[opCode.X]) ? 2 : 0);
+                state.Registers.PC += (ushort)(!_input.IsKeyPressed((Keys)state.Registers.V[opCode.X]) ? 2 : 0);
                 break;
         }
     }
@@ -346,60 +270,60 @@ public class Cpu
     #region misc instructions
 
     //0xFX1E
-    private void AddVRegToI(OpCode opCode)
+    private void AddVRegToI(State state, OpCode opCode)
     {
-        _i += _v[opCode.X];
+        state.Registers.I += state.Registers.V[opCode.X];
     }
 
     //0xFX65
-    private void FillVFromMI(OpCode opCode)
+    private void FillVFromMI(State state, OpCode opCode)
     {
         for (byte i = 0; i <= opCode.X; ++i)
-            _v[i] = _memory[_i + i];
+            state.Registers.V[i] = state.Memory[state.Registers.I + i];
     }
 
-    private void SetDelay(OpCode opCode)
+    private void SetDelay(State state, OpCode opCode)
     {
-        _delay = _v[opCode.X];
+        _clock.Delay = state.Registers.V[opCode.X];
     }
 
     //0xFX07
-    private void GetDelay(OpCode opCode)
+    private void GetDelay(State state, OpCode opCode)
     {
-        _v[opCode.X] = _delay;
+        state.Registers.V[opCode.X] = _clock.Delay;
     }
 
     //0xFX0A
-    private void WaitKey(OpCode opCode)
+    private void WaitKey(State state, OpCode opCode)
     {
-        if (_pressedKeys.Count == 0)
+        if (!_input.IsAnyKeyPressed())
         {
-            _pc -= 2;
+            state.Registers.PC -= 2;
             return;
         }
 
-        _v[opCode.X] = _pressedKeys.First();
+        state.Registers.V[opCode.X] = (byte)_input.GetMostRecentKeyPressed()!;
     }
 
     //0xFX33
-    private void SetBCD(OpCode opCode)
+    private void SetBCD(State state, OpCode opCode)
     {
-        var vx = _v[opCode.X];
-        _memory[_i] = (byte)(vx / 100);
-        _memory[_i + 1] = (byte)((vx / 10) % 10);
-        _memory[_i + 2] = (byte)(vx % 10);
+        var vx = state.Registers.V[opCode.X];
+        state.Memory[state.Registers.I] = (byte)(vx / 100);
+        state.Memory[state.Registers.I + 1] = (byte)((vx / 10) % 10);
+        state.Memory[state.Registers.I + 2] = (byte)(vx % 10);
     }
 
     //0xFX29
-    private void SetIToCharSprite(OpCode opCode)
+    private void SetIToCharSprite(State state, OpCode opCode)
     {
-        _i = (ushort)(_v[opCode.X] * 5);
+        state.Registers.I = (ushort)(state.Registers.V[opCode.X] * 5);
     }
 
     // 0xFX18
-    private void PlaySound(OpCode opCode)
+    private void PlaySound(State state, OpCode opCode)
     {
-        var duration = _v[opCode.X];
+        var duration = state.Registers.V[opCode.X];
         _soundPlayer.Beep(duration);
     }
 
