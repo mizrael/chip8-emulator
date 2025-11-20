@@ -7,8 +7,8 @@ public class Cpu
 {
     #region members
 
-    private readonly Dictionary<byte, Action<Registers, Buffers, OpCode>> _instructions = new();
-    private readonly Dictionary<byte, Action<Registers, Buffers, OpCode>> _miscInstructions = new();
+    private readonly Dictionary<byte, Action<State, OpCode>> _instructions = new();
+    private readonly Dictionary<byte, Action<State, OpCode>> _miscInstructions = new();
 
     private readonly IRenderer _renderer;
     private readonly ISoundPlayer _soundPlayer;
@@ -49,23 +49,22 @@ public class Cpu
         _clock = clock;
     }
 
-    private void ExecuteCurrentInstruction(Registers registers, Buffers memory)
+    private void ExecuteCurrentInstruction(State state)
     {
-        var opCode = registers.GetCurrentOp(memory);
+        var opCode = state.GetCurrentOp();
 
         if (!_instructions.TryGetValue(opCode.Set, out var instruction))
             throw new NotImplementedException($"instruction '{opCode.Set:X}' not implemented");
 
-        instruction(registers, memory, opCode);
+        instruction(state, opCode);
     }
 
     public void Update(
-        Registers registers,
-        Buffers memory,
+        State state,
         double elapsedSeconds,
         int targetInstructionsPerSecond)
     {
-        var onTick = () => this.ExecuteCurrentInstruction(registers, memory);
+        var onTick = () => this.ExecuteCurrentInstruction(state);
 
         _clock.Update(onTick, elapsedSeconds, targetInstructionsPerSecond);
     }
@@ -73,38 +72,38 @@ public class Cpu
     #region instructions
 
     // 0xCXNN
-    private void Rand(Registers registers, Buffers memory, OpCode opCode)
+    private void Rand(State state, OpCode opCode)
     {
-        registers.V[opCode.X] = (byte)(Random.Shared.Next(0, 255) & opCode.NN);
+        state.Registers.V[opCode.X] = (byte)(Random.Shared.Next(0, 255) & opCode.NN);
     }
 
     // 0x1NNN
-    private void Jump(Registers registers, Buffers memory, OpCode opCode)
+    private void Jump(State state, OpCode opCode)
     {
-        registers.PC = opCode.NNN;
+        state.Registers.PC = opCode.NNN;
     }
 
     // 0x6XNN
-    private void SetVReg(Registers registers, Buffers memory, OpCode opCode)
+    private void SetVReg(State state, OpCode opCode)
     {
-        registers.V[opCode.X] = opCode.NN;
+        state.Registers.V[opCode.X] = opCode.NN;
     }
 
     // 0x7XNN
-    private void AddVReg(Registers registers, Buffers memory, OpCode opCode)
+    private void AddVReg(State state, OpCode opCode)
     {
-        int result = registers.V[opCode.X] + opCode.NN;
+        int result = state.Registers.V[opCode.X] + opCode.NN;
         bool carry = result > 255;
         if (carry)
             result = result - 256;
 
-        registers.V[opCode.X] = (byte)(result & 0x00FF);
+        state.Registers.V[opCode.X] = (byte)(result & 0x00FF);
     }
 
     // 0xANNN
-    private void SetI(Registers registers, Buffers memory, OpCode opCode)
+    private void SetI(State state, OpCode opCode)
     {
-        registers.I = opCode.NNN;
+        state.Registers.I = opCode.NNN;
     }
 
     /// <summary>
@@ -120,76 +119,76 @@ public class Cpu
     /// from set to unset when a sprite is drawn and set to 0 otherwise. 
     /// </summary>
     /// <param name="opCode"></param>
-    private void Draw(Registers registers, Buffers memory, OpCode opCode)
+    private void Draw(State state, OpCode opCode)
     {
-        var startX = registers.V[opCode.X];
-        var startY = registers.V[opCode.Y];
+        var startX = state.Registers.V[opCode.X];
+        var startY = state.Registers.V[opCode.Y];
         var rows = opCode.N;
         byte carry = 0;
         bool updateRenderer = false;
 
         for (byte row = 0; row < rows; row++)
         {
-            var rowData = memory.Memory[registers.I + row];
+            var rowData = state.Memory[state.Registers.I + row];
             var py = (startY + row) % Constants.SCREEN_HEIGHT;
 
             for (byte col = 0; col != 8; col++)
             {
                 var px = (startX + col) % Constants.SCREEN_WIDTH;
-                var oldPixel = (byte)(memory.Screen[px, py] ? 1 : 0);
+                var oldPixel = (byte)(state.Screen[px, py] ? 1 : 0);
                 var spritePixel = (byte)((rowData >> (7 - col)) & 1);
 
                 if (oldPixel != spritePixel)
                     updateRenderer = true;
 
                 var newPixel = (byte)(oldPixel ^ spritePixel);
-                memory.Screen[px, py] = (newPixel != 0);
+                state.Screen[px, py] = (newPixel != 0);
 
                 if (oldPixel == 1 && spritePixel == 1)
                     carry = 1;
             }
         }
 
-        registers.V[0xF] = carry;
+        state.Registers.V[0xF] = carry;
 
         if (updateRenderer)
-            _renderer.Draw(memory.Screen);
+            _renderer.Draw(state.Screen);
     }
 
-    private void Misc(Registers registers, Buffers memory, OpCode opCode)
+    private void Misc(State state, OpCode opCode)
     {
         if (!_miscInstructions.TryGetValue(opCode.NN, out var instruction))
             throw new NotImplementedException($"misc instruction '0xF{opCode.NN:X}' not implemented");
 
-        instruction(registers, memory, opCode);
+        instruction(state, opCode);
     }
 
     // 0x3XNN
-    private void SkipVxEqNN(Registers registers, Buffers memory, OpCode opCode)
+    private void SkipVxEqNN(State state, OpCode opCode)
     {
-        if (registers.V[opCode.X] == opCode.NN)
-            registers.PC += 2;
+        if (state.Registers.V[opCode.X] == opCode.NN)
+            state.Registers.PC += 2;
     }
 
     // 0x4XNN
-    private void SkipVxNeqNN(Registers registers, Buffers memory, OpCode opCode)
+    private void SkipVxNeqNN(State state, OpCode opCode)
     {
-        if (registers.V[opCode.X] != opCode.NN)
-            registers.PC += 2;
+        if (state.Registers.V[opCode.X] != opCode.NN)
+            state.Registers.PC += 2;
     }
 
     // 0x9XY0
-    private void SkipVxNeqVy(Registers registers, Buffers memory, OpCode opCode)
+    private void SkipVxNeqVy(State state, OpCode opCode)
     {
-        if (registers.V[opCode.X] != registers.V[opCode.Y])
-            registers.PC += 2;
+        if (state.Registers.V[opCode.X] != state.Registers.V[opCode.Y])
+            state.Registers.PC += 2;
     }
 
     // 0x2NNN
-    private void Call(Registers registers, Buffers memory, OpCode opCode)
+    private void Call(State state, OpCode opCode)
     {
-        Push(registers, registers.PC);
-        registers.PC = opCode.NNN;
+        Push(state.Registers, state.Registers.PC);
+        state.Registers.PC = opCode.NNN;
     }
 
     private void Push(Registers registers, ushort value)
@@ -198,54 +197,54 @@ public class Cpu
     private ushort Pop(Registers registers)
     => registers.Stack[--registers.SP];
 
-    private void ZeroOps(Registers registers, Buffers memory, OpCode opCode)
+    private void ZeroOps(State state, OpCode opCode)
     {
         switch (opCode.NN)
         {
             case 0xE0:
-                Array.Clear(memory.Screen, 0, memory.Screen.Length);
+                state.Screen.Reset();
                 break;
             case 0xEE:
-                registers.PC = Pop(registers);
+                state.Registers.PC = Pop(state.Registers);
                 break;
             default:
                 throw new NotImplementedException($"instruction '0x0{opCode.NN:X}' not implemented");
         }
     }
 
-    private void XYOps(Registers registers, Buffers memory, OpCode opCode)
+    private void XYOps(State state, OpCode opCode)
     {
         switch (opCode.N)
         {
             case 0x0:
-                registers.V[opCode.X] = registers.V[opCode.Y];
+                state.Registers.V[opCode.X] = state.Registers.V[opCode.Y];
                 break;
             case 0x1:
-                registers.V[opCode.X] |= registers.V[opCode.Y];
+                state.Registers.V[opCode.X] |= state.Registers.V[opCode.Y];
                 break;
             case 0x2:
-                registers.V[opCode.X] &= registers.V[opCode.Y];
+                state.Registers.V[opCode.X] &= state.Registers.V[opCode.Y];
                 break;
             case 0x3:
-                registers.V[opCode.X] ^= registers.V[opCode.Y];
+                state.Registers.V[opCode.X] ^= state.Registers.V[opCode.Y];
                 break;
             case 0x4:
-                var res = registers.V[opCode.X] + registers.V[opCode.Y];
+                var res = state.Registers.V[opCode.X] + state.Registers.V[opCode.Y];
                 var carry = res > 255;
-                registers.V[opCode.X] = (byte)res;
-                registers.V[0xF] = (byte)(carry ? 1 : 0);
+                state.Registers.V[opCode.X] = (byte)res;
+                state.Registers.V[0xF] = (byte)(carry ? 1 : 0);
                 break;
             case 0x5:
-                registers.V[0xF] = (byte)(registers.V[opCode.X] > registers.V[opCode.Y] ? 1 : 0);
-                registers.V[opCode.X] -= registers.V[opCode.Y];
+                state.Registers.V[0xF] = (byte)(state.Registers.V[opCode.X] > state.Registers.V[opCode.Y] ? 1 : 0);
+                state.Registers.V[opCode.X] -= state.Registers.V[opCode.Y];
                 break;
             case 0x6:
-                registers.V[0xF] = (byte)((registers.V[opCode.X] & 0x1) == 1 ? 1 : 0);
-                registers.V[opCode.X] >>= 1;
+                state.Registers.V[0xF] = (byte)((state.Registers.V[opCode.X] & 0x1) == 1 ? 1 : 0);
+                state.Registers.V[opCode.X] >>= 1;
                 break;
             case 0x7:
-                registers.V[0xF] = (byte)(registers.V[opCode.Y] > registers.V[opCode.X] ? 1 : 0);
-                registers.V[opCode.X] = (byte)(registers.V[opCode.Y] - registers.V[opCode.X]);
+                state.Registers.V[0xF] = (byte)(state.Registers.V[opCode.Y] > state.Registers.V[opCode.X] ? 1 : 0);
+                state.Registers.V[opCode.X] = (byte)(state.Registers.V[opCode.Y] - state.Registers.V[opCode.X]);
                 break;
             default:
                 throw new NotImplementedException($"instruction '0x8XY{opCode.N:X}' not implemented");
@@ -253,15 +252,15 @@ public class Cpu
     }
 
     // 0xE
-    private void SkipOnKey(Registers registers, Buffers memory, OpCode opCode)
+    private void SkipOnKey(State state, OpCode opCode)
     {
         switch (opCode.NN)
         {
             case 0x9E:
-                registers.PC += (ushort)(_input.IsKeyPressed((Keys)registers.V[opCode.X]) ? 2 : 0);
+                state.Registers.PC += (ushort)(_input.IsKeyPressed((Keys)state.Registers.V[opCode.X]) ? 2 : 0);
                 break;
             case 0xA1:
-                registers.PC += (ushort)(!_input.IsKeyPressed((Keys)registers.V[opCode.X]) ? 2 : 0);
+                state.Registers.PC += (ushort)(!_input.IsKeyPressed((Keys)state.Registers.V[opCode.X]) ? 2 : 0);
                 break;
         }
     }
@@ -271,60 +270,60 @@ public class Cpu
     #region misc instructions
 
     //0xFX1E
-    private void AddVRegToI(Registers registers, Buffers memory, OpCode opCode)
+    private void AddVRegToI(State state, OpCode opCode)
     {
-        registers.I += registers.V[opCode.X];
+        state.Registers.I += state.Registers.V[opCode.X];
     }
 
     //0xFX65
-    private void FillVFromMI(Registers registers, Buffers memory, OpCode opCode)
+    private void FillVFromMI(State state, OpCode opCode)
     {
         for (byte i = 0; i <= opCode.X; ++i)
-            registers.V[i] = memory.Memory[registers.I + i];
+            state.Registers.V[i] = state.Memory[state.Registers.I + i];
     }
 
-    private void SetDelay(Registers registers, Buffers memory, OpCode opCode)
+    private void SetDelay(State state, OpCode opCode)
     {
-        _clock.Delay = registers.V[opCode.X];
+        _clock.Delay = state.Registers.V[opCode.X];
     }
 
     //0xFX07
-    private void GetDelay(Registers registers, Buffers memory, OpCode opCode)
+    private void GetDelay(State state, OpCode opCode)
     {
-        registers.V[opCode.X] = _clock.Delay;
+        state.Registers.V[opCode.X] = _clock.Delay;
     }
 
     //0xFX0A
-    private void WaitKey(Registers registers, Buffers memory, OpCode opCode)
+    private void WaitKey(State state, OpCode opCode)
     {
         if (!_input.IsAnyKeyPressed())
         {
-            registers.PC -= 2;
+            state.Registers.PC -= 2;
             return;
         }
 
-        registers.V[opCode.X] = (byte)_input.GetMostRecentKeyPressed()!;
+        state.Registers.V[opCode.X] = (byte)_input.GetMostRecentKeyPressed()!;
     }
 
     //0xFX33
-    private void SetBCD(Registers registers, Buffers memory, OpCode opCode)
+    private void SetBCD(State state, OpCode opCode)
     {
-        var vx = registers.V[opCode.X];
-        memory.Memory[registers.I] = (byte)(vx / 100);
-        memory.Memory[registers.I + 1] = (byte)((vx / 10) % 10);
-        memory.Memory[registers.I + 2] = (byte)(vx % 10);
+        var vx = state.Registers.V[opCode.X];
+        state.Memory[state.Registers.I] = (byte)(vx / 100);
+        state.Memory[state.Registers.I + 1] = (byte)((vx / 10) % 10);
+        state.Memory[state.Registers.I + 2] = (byte)(vx % 10);
     }
 
     //0xFX29
-    private void SetIToCharSprite(Registers registers, Buffers memory, OpCode opCode)
+    private void SetIToCharSprite(State state, OpCode opCode)
     {
-        registers.I = (ushort)(registers.V[opCode.X] * 5);
+        state.Registers.I = (ushort)(state.Registers.V[opCode.X] * 5);
     }
 
     // 0xFX18
-    private void PlaySound(Registers registers, Buffers memory, OpCode opCode)
+    private void PlaySound(State state, OpCode opCode)
     {
-        var duration = registers.V[opCode.X];
+        var duration = state.Registers.V[opCode.X];
         _soundPlayer.Beep(duration);
     }
 

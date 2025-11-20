@@ -14,8 +14,7 @@ public class Game1 : Game
     private TextureRenderer _renderer;
 
     private Cpu _cpu;
-    private Buffers _memory;
-    private Registers _registers;
+    private State _state;
     private Input _input;
 
     private const int InstructionsPerSecond = 400; 
@@ -70,8 +69,7 @@ public class Game1 : Game
 
     protected override void LoadContent()
     {
-        _memory = new Buffers();
-        _registers = new Registers();
+        _state = new();
         _input = new Input();
 
         _spriteBatch = new SpriteBatch(GraphicsDevice);
@@ -80,14 +78,13 @@ public class Game1 : Game
 
         var romPath = "Content/roms/PONG";
         using var romData = System.IO.File.OpenRead(romPath);
-        _memory.LoadRom(romData);
+        _state.Memory.LoadRom(romData);
     }
 
     protected override void Update(GameTime gameTime)
     {
         _cpu.Update(
-            _registers,
-            _memory,
+            _state,
             gameTime.ElapsedGameTime.TotalSeconds,
             InstructionsPerSecond);
 

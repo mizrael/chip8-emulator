@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace Chip8Emulator.Core;
+namespace Chip8Emulator.Core.Utils;
 
 public class LRUCache<TKey, TValue>
     where TKey : notnull

@@ -36,8 +36,7 @@
     int _canvasHeight = 400;
 
     Cpu _cpu;
-    Buffers _memory;
-    Registers _registers;
+    State _state;
     Input _input;
     Core.IRenderer _renderer;
     System.Timers.Timer _cpuTickTimer;
@@ -106,17 +105,17 @@
         }
 
         using var romData = await response.Content.ReadAsStreamAsync();
-        _memory.LoadRom(romData);
+        _state.Memory.LoadRom(romData);
 
         _cpuTickTimer.Enabled = true;
     }
 
-    private void UpdateFrame(bool[,] data)
+    private void UpdateFrame(Screen screen)
     {
         for (int col = 0; col != Chip8Emulator.Core.Constants.SCREEN_WIDTH; col++)
             for (int row = 0; row != Chip8Emulator.Core.Constants.SCREEN_HEIGHT; row++)
             {
-                var color = data[col, row] ? (byte)255 : (byte)0;
+                var color = screen[col, row] ? (byte)255 : (byte)0;
                 int index = (row * Chip8Emulator.Core.Constants.SCREEN_WIDTH + col) * 4;
                 _frameBuffer[index + 0] = color; // R
                 _frameBuffer[index + 1] = color; // G
@@ -183,8 +182,7 @@
         });
 
         _input = new Input();
-        _registers = new Registers();
-        _memory = new Buffers();
+        _state = new();
         _renderer = new LambdaRenderer(data => UpdateFrame(data));
         _cpu = new Cpu(_renderer, new Chip8Emulator.Core.DefaultSoundPlayer(), _input, new Clock());
 
@@ -193,7 +191,7 @@
         _cpuTickTimer.Elapsed += (s, e) =>
         {
             double elapsedSeconds = _tickInterval / 1000.0;
-            _cpu.Update(_registers, _memory, elapsedSeconds, _instructionsPerSecond);
+            _cpu.Update(_state, elapsedSeconds, _instructionsPerSecond);
         };
     }
 

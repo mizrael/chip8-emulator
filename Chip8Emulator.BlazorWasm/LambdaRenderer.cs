@@ -5,13 +5,13 @@ namespace Chip8Emulator.BlazorWasm;
 
 public class LambdaRenderer : IRenderer
 {
-    private readonly Action<bool[,]> _renderer;
+    private readonly Action<Screen> _renderer;
 
-    public LambdaRenderer(Action<bool[,]> renderer)
+    public LambdaRenderer(Action<Screen> renderer)
     {
         _renderer = renderer ?? throw new ArgumentNullException(nameof(renderer));
     }
 
-    public void Draw(bool[,] data)
-        => _renderer(data);
+    public void Draw(Screen screen)
+        => _renderer(screen);
 }
