@@ -38,7 +38,9 @@
     Cpu _cpu;
     State _state;
     Input _input;
-    Core.IRenderer _renderer;
+    Core.IDisplay _renderer;
+    Interfaces _interfaces;
+
     System.Timers.Timer _cpuTickTimer;
     int _tickInterval = 10; // milliseconds
     int _instructionsPerSecond = 400; // default IPS for web
@@ -110,7 +112,7 @@
         _cpuTickTimer.Enabled = true;
     }
 
-    private void UpdateFrame(Screen screen)
+    private void UpdateFrame(VideoBuffer screen)
     {
         for (int col = 0; col != Chip8Emulator.Core.Constants.SCREEN_WIDTH; col++)
             for (int row = 0; row != Chip8Emulator.Core.Constants.SCREEN_HEIGHT; row++)
@@ -182,9 +184,12 @@
         });
 
         _input = new Input();
-        _state = new();
         _renderer = new LambdaRenderer(data => UpdateFrame(data));
-        _cpu = new Cpu(_renderer, new Chip8Emulator.Core.DefaultSoundPlayer(), _input, new Clock());
+        _interfaces = new(_renderer, null);
+        _state = new();
+
+
+        _cpu = new Cpu(_interfaces, new Clock());
 
         _cpuTickTimer = new System.Timers.Timer();
         this.SetCPUInterval();

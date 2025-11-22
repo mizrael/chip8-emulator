@@ -4,7 +4,7 @@ using Microsoft.Xna.Framework.Graphics;
 
 namespace Chip8Emulator.MonoGame;
 
-public class TextureRenderer : IRenderer
+public class TextureRenderer : IDisplay
 {
     public readonly Texture2D Texture;
     private readonly Color[] _pixels;
@@ -15,7 +15,7 @@ public class TextureRenderer : IRenderer
         Texture = new Texture2D(graphicsDevice, Constants.SCREEN_WIDTH, Constants.SCREEN_HEIGHT, false, SurfaceFormat.Color);
     }
 
-    public void Draw(Screen screen)
+    public void Refresh(VideoBuffer screen)
     {
         for (int col = 0; col != Constants.SCREEN_WIDTH; col++)
             for (int row = 0; row != Constants.SCREEN_HEIGHT; row++)

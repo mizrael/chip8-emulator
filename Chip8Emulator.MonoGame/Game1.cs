@@ -15,9 +15,9 @@ public class Game1 : Game
 
     private Cpu _cpu;
     private State _state;
-    private Input _input;
+    private Interfaces _interfaces;
 
-    private const int InstructionsPerSecond = 400; 
+    private const int InstructionsPerSecond = 400;
 
     private readonly Dictionary<MonoKeys, Core.Keys> _keyMappings = new Dictionary<MonoKeys, Keys>() {
         { MonoKeys.D1, Keys.Number1 },
@@ -58,27 +58,27 @@ public class Game1 : Game
     private void Window_KeyUp(object sender, InputKeyEventArgs e)
     {
         if (_keyMappings.ContainsKey(e.Key))
-            _input.SetKeyUp(_keyMappings[e.Key]);
+            _interfaces.Input.SetKeyUp(_keyMappings[e.Key]);
     }
 
     private void Window_KeyDown(object sender, InputKeyEventArgs e)
     {
         if (_keyMappings.ContainsKey(e.Key))
-            _input.SetKeyDown(_keyMappings[e.Key]);
+            _interfaces.Input.SetKeyDown(_keyMappings[e.Key]);
     }
 
     protected override void LoadContent()
     {
-        _state = new();
-        _input = new Input();
-
         _spriteBatch = new SpriteBatch(GraphicsDevice);
+     
         _renderer = new TextureRenderer(this.GraphicsDevice);
-        _cpu = new Cpu(_renderer, new DefaultSoundPlayer(), _input, new Clock());
+        _interfaces = new Interfaces(_renderer, new MonoGameSoundPlayer());
+        _cpu = new Cpu(_interfaces, new Clock());
 
-        var romPath = "Content/roms/TETRIS";
+        _state = new();
+        var romPath = "Content/roms/pong";
         using var romData = System.IO.File.OpenRead(romPath);
-        _state.Memory.LoadRom(romData);
+        _state.LoadRom(romData);
     }
 
     protected override void Update(GameTime gameTime)

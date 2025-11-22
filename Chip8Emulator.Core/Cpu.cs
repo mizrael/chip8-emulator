@@ -10,14 +10,12 @@ public class Cpu
     private readonly Dictionary<byte, Action<State, OpCode>> _instructions = new();
     private readonly Dictionary<byte, Action<State, OpCode>> _miscInstructions = new();
 
-    private readonly IRenderer _renderer;
-    private readonly ISoundPlayer _soundPlayer;
-    private readonly Input _input;
+    private readonly Interfaces _interfaces;
     private readonly Clock _clock;
 
     #endregion members
 
-    public Cpu(IRenderer renderer, ISoundPlayer soundPlayer, Input input, Clock clock)
+    public Cpu(Interfaces interfaces, Clock clock)
     {
         _instructions[0x0] = this.ZeroOps;
         _instructions[0x1] = this.Jump;
@@ -43,9 +41,7 @@ public class Cpu
         _miscInstructions[0x29] = this.SetIToCharSprite;
         _miscInstructions[0x18] = this.PlaySound;
 
-        _renderer = renderer;
-        _soundPlayer = soundPlayer;
-        _input = input;
+        _interfaces = interfaces;
         _clock = clock;
     }
 
@@ -135,14 +131,14 @@ public class Cpu
             for (byte col = 0; col != 8; col++)
             {
                 var px = (startX + col) % Constants.SCREEN_WIDTH;
-                var oldPixel = (byte)(state.Screen[px, py] ? 1 : 0);
+                var oldPixel = (byte)(state.VideoBuffer[px, py] ? 1 : 0);
                 var spritePixel = (byte)((rowData >> (7 - col)) & 1);
 
                 if (oldPixel != spritePixel)
                     updateRenderer = true;
 
                 var newPixel = (byte)(oldPixel ^ spritePixel);
-                state.Screen[px, py] = (newPixel != 0);
+                state.VideoBuffer[px, py] = (newPixel != 0);
 
                 if (oldPixel == 1 && spritePixel == 1)
                     carry = 1;
@@ -152,7 +148,7 @@ public class Cpu
         state.Registers.V[0xF] = carry;
 
         if (updateRenderer)
-            _renderer.Draw(state.Screen);
+            _interfaces.Display.Refresh(state.VideoBuffer);
     }
 
     private void Misc(State state, OpCode opCode)
@@ -202,7 +198,7 @@ public class Cpu
         switch (opCode.NN)
         {
             case 0xE0:
-                state.Screen.Reset();
+                state.VideoBuffer.Reset();
                 break;
             case 0xEE:
                 state.Registers.PC = Pop(state.Registers);
@@ -257,10 +253,10 @@ public class Cpu
         switch (opCode.NN)
         {
             case 0x9E:
-                state.Registers.PC += (ushort)(_input.IsKeyPressed((Keys)state.Registers.V[opCode.X]) ? 2 : 0);
+                state.Registers.PC += (ushort)(_interfaces.Input.IsKeyPressed((Keys)state.Registers.V[opCode.X]) ? 2 : 0);
                 break;
             case 0xA1:
-                state.Registers.PC += (ushort)(!_input.IsKeyPressed((Keys)state.Registers.V[opCode.X]) ? 2 : 0);
+                state.Registers.PC += (ushort)(!_interfaces.Input.IsKeyPressed((Keys)state.Registers.V[opCode.X]) ? 2 : 0);
                 break;
         }
     }
@@ -296,13 +292,13 @@ public class Cpu
     //0xFX0A
     private void WaitKey(State state, OpCode opCode)
     {
-        if (!_input.IsAnyKeyPressed())
+        if (!_interfaces.Input.IsAnyKeyPressed())
         {
             state.Registers.PC -= 2;
             return;
         }
 
-        state.Registers.V[opCode.X] = (byte)_input.GetMostRecentKeyPressed()!;
+        state.Registers.V[opCode.X] = (byte)_interfaces.Input.GetMostRecentKeyPressed()!;
     }
 
     //0xFX33
@@ -324,7 +320,7 @@ public class Cpu
     private void PlaySound(State state, OpCode opCode)
     {
         var duration = state.Registers.V[opCode.X];
-        _soundPlayer.Beep(duration);
+        _interfaces.Audio.Beep(duration);
     }
 
     #endregion misc instructions

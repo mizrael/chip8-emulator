@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 namespace Chip8Emulator.Core.Utils;
 
@@ -108,10 +109,24 @@ public class LRUCache<TKey, TValue>
         _head = node;
     }
 
-    public (TKey?, TValue?) GetLast()
+    public (TKey?, TValue?) PeekLast()
         => (_tail == null) ?
                 (default, default) :
                 (_tail.Key, _tail.Value);
+
+    public TValue GetOrAdd(TKey key, Func<TKey, TValue> factory)
+    {
+        if (this.ContainsKey(key))
+        {
+              var node = _cache[key];
+              MoveToHead(node);
+              return node.Value;
+         }
+
+        var value = factory(key);
+        this.AddOrUpdate(key, value);
+        return value;
+    }
 
     public uint Count => (uint)_cache.Count;
 

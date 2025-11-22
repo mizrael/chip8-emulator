@@ -26,7 +26,7 @@ public class Input
         if (_pressedKeys.Count == 0)
             return null;
 
-        var (key, _) = _pressedKeys.GetLast();
+        var (key, _) = _pressedKeys.PeekLast();
         return key;
     }
 }

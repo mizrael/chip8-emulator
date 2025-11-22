@@ -3,15 +3,15 @@ using System;
 
 namespace Chip8Emulator.BlazorWasm;
 
-public class LambdaRenderer : IRenderer
+public class LambdaRenderer : IDisplay
 {
-    private readonly Action<Screen> _renderer;
+    private readonly Action<VideoBuffer> _renderer;
 
-    public LambdaRenderer(Action<Screen> renderer)
+    public LambdaRenderer(Action<VideoBuffer> renderer)
     {
         _renderer = renderer ?? throw new ArgumentNullException(nameof(renderer));
     }
 
-    public void Draw(Screen screen)
+    public void Refresh(VideoBuffer screen)
         => _renderer(screen);
 }

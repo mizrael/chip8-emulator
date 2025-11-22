@@ -1,13 +1,12 @@
-﻿using Chip8Emulator.Core.Utils;
-using System;
+﻿using System;
 
 namespace Chip8Emulator.Core;
 
-public record Screen
+public record VideoBuffer
 {
     private readonly bool[,] _data;
-
-    public Screen()
+    
+    public VideoBuffer()
     {
         _data = new bool[Constants.SCREEN_WIDTH, Constants.SCREEN_HEIGHT];
     }
