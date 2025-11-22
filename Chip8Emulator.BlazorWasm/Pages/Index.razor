@@ -37,8 +37,6 @@
 
     Cpu _cpu;
     State _state;
-    Input _input;
-    Core.IDisplay _renderer;
     Interfaces _interfaces;
 
     System.Timers.Timer _cpuTickTimer;
@@ -183,11 +181,8 @@
             OnCanvasReadyAsync = this.OnOffscreenCanvasReady
         });
 
-        _input = new Input();
-        _renderer = new LambdaRenderer(data => UpdateFrame(data));
-        _interfaces = new(_renderer, null);
+        _interfaces = new(new LambdaRenderer(data => UpdateFrame(data)), new BlazorSoundPlayer(JsRuntime));
         _state = new();
-
 
         _cpu = new Cpu(_interfaces, new Clock());
 
@@ -203,12 +198,12 @@
     public void OnKeyDown(KeyboardPressEvent evt)
     {
         if (_keyMappings.ContainsKey(evt.KeyCode))
-            _input.SetKeyDown(_keyMappings[evt.KeyCode]);
+            _interfaces.Input.SetKeyDown(_keyMappings[evt.KeyCode]);
     }
 
     public void OnKeyUp(KeyboardPressEvent evt)
     {
         if (_keyMappings.ContainsKey(evt.KeyCode))
-            _input.SetKeyUp(_keyMappings[evt.KeyCode]);
+            _interfaces.Input.SetKeyUp(_keyMappings[evt.KeyCode]);
     }
 }
