@@ -184,7 +184,7 @@
         _interfaces = new(new LambdaRenderer(data => UpdateFrame(data)), new BlazorSoundPlayer(JsRuntime));
         _state = new();
 
-        _cpu = new Cpu(_interfaces, new Clock());
+        _cpu = new Cpu(_interfaces);
 
         _cpuTickTimer = new System.Timers.Timer();
         this.SetCPUInterval();

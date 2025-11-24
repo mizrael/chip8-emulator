@@ -2,7 +2,7 @@
 
 namespace Chip8Emulator.Core;
 
-public class Clock
+public record Clock
 {
     private double _timerAccumulator = 0.0;
     private double _instructionAccumulator = 0.0;
@@ -10,6 +10,13 @@ public class Clock
     private const double delayRefreshRate = 1.0 / 60.0;
 
     public byte Delay { get; set; }
+
+    public void Reset()
+    {
+        _timerAccumulator = 0.0;
+        _instructionAccumulator = 0.0;
+        Delay = 0;
+    }
 
     public void Update(
         Action onTick,

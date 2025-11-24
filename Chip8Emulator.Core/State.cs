@@ -8,6 +8,8 @@ public record State
     public Memory Memory { get; } = new();
     public VideoBuffer VideoBuffer { get; } = new();
 
+    public Clock Clock { get; } = new();
+
     public OpCode GetCurrentOp()
     {
         ushort data = (ushort)(this.Memory[this.Registers.PC++] << 8 | this.Memory[this.Registers.PC++]);
@@ -17,6 +19,7 @@ public record State
 
     public void LoadRom(FileStream romData)
     {
+        this.Clock.Reset();
         this.VideoBuffer.Reset();
         this.Registers.Reset();
         this.Memory.LoadRom(romData);

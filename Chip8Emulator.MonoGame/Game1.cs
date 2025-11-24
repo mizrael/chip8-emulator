@@ -73,7 +73,7 @@ public class Game1 : Game
      
         _renderer = new TextureRenderer(this.GraphicsDevice);
         _interfaces = new Interfaces(_renderer, new MonoGameSoundPlayer());
-        _cpu = new Cpu(_interfaces, new Clock());
+        _cpu = new Cpu(_interfaces);
 
         _state = new();
         var romPath = "Content/roms/pong";
