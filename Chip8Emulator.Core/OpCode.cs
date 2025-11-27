@@ -1,6 +1,4 @@
-﻿using System.Threading;
-
-namespace Chip8Emulator.Core;
+﻿namespace Chip8Emulator.Core;
 
 public readonly struct OpCode
 {
@@ -21,7 +19,7 @@ public readonly struct OpCode
     public ushort Data { get; }
 
     /// <summary>
-    /// the opcode category, stored in the first 4 bits - data >> 12
+    /// the opcode category, stored in the first 4 bits : data >> 12
     /// </summary>
     public byte Set { get; }
 
