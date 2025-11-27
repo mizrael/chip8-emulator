@@ -17,8 +17,8 @@ public record Memory
     internal void Reset()
     {
         Array.Clear(_data);
-        for (var i = 0; i != Font.Characters.Length; ++i)
-            _data[i] = Font.Characters[i];
+        for (var i = 0; i != Constants.Fonts.Length; ++i)
+            _data[i] = Constants.Fonts[i];
     }
 
     internal void LoadRom(System.IO.Stream romData)
