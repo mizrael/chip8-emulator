@@ -105,7 +105,7 @@
         }
 
         using var romData = await response.Content.ReadAsStreamAsync();
-        _state.Memory.LoadRom(romData);
+        _state.LoadRom(romData);
 
         _cpuTickTimer.Enabled = true;
     }

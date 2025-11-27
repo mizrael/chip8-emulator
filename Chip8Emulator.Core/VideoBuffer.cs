@@ -19,7 +19,7 @@ public record VideoBuffer
         set => _data[i, j] = value;
     }
 
-    public void Reset()
+    internal void Reset()
     {
         Array.Clear(_data);
     }

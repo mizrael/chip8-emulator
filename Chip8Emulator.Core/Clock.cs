@@ -11,14 +11,14 @@ public record Clock
 
     public byte Delay { get; set; }
 
-    public void Reset()
+    internal void Reset()
     {
         _timerAccumulator = 0.0;
         _instructionAccumulator = 0.0;
         Delay = 0;
     }
 
-    public void Update(
+    internal void Update(
         Action onTick,
         double elapsedSeconds,
         int targetInstructionsPerSecond)

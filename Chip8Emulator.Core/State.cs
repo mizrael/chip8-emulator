@@ -17,7 +17,7 @@ public record State
         return opCode;
     }
 
-    public void LoadRom(FileStream romData)
+    public void LoadRom(Stream romData)
     {
         this.Clock.Reset();
         this.VideoBuffer.Reset();

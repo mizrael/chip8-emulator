@@ -10,7 +10,7 @@ public record Registers
     public byte SP { get; set; }
     public ushort[] Stack { get; } = new ushort[16];
 
-    public void Reset()
+    internal void Reset()
     {
         Array.Clear(this.V);
         Array.Clear(this.Stack);
