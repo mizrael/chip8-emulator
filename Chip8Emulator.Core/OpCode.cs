@@ -21,22 +21,22 @@ public readonly struct OpCode
     public ushort Data { get; }
 
     /// <summary>
-    /// the opcode category
+    /// the opcode category, stored in the first 4 bits - data >> 12
     /// </summary>
     public byte Set { get; }
 
     /// <summary>
-    /// the last 12 bits - 0x0FFF
+    /// the last 12 bits : data & 0x0FFF
     /// </summary>
     public ushort NNN { get; }
 
     /// <summary>
-    /// the last 8 bits - 0x00FF
+    /// the last 8 bits : data & 0x00FF
     /// </summary>
     public byte NN { get; }
 
     /// <summary>
-    /// the last 4 bits - 0x000F
+    /// the last 4 bits : data & 0x000F
     /// </summary>
     public byte N { get; }
 
