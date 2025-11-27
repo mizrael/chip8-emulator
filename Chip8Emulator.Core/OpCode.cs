@@ -1,4 +1,6 @@
-﻿namespace Chip8Emulator.Core;
+﻿using System.Threading;
+
+namespace Chip8Emulator.Core;
 
 public readonly struct OpCode
 {
@@ -13,11 +15,38 @@ public readonly struct OpCode
         this.Y = (byte)((data & 0x00F0) >> 4);
     }
 
+    /// <summary>
+    /// the 2 bytes being parsed
+    /// </summary>
     public ushort Data { get; }
+
+    /// <summary>
+    /// the opcode category
+    /// </summary>
     public byte Set { get; }
+
+    /// <summary>
+    /// the last 12 bits - 0x0FFF
+    /// </summary>
     public ushort NNN { get; }
+
+    /// <summary>
+    /// the last 8 bits - 0x00FF
+    /// </summary>
     public byte NN { get; }
+
+    /// <summary>
+    /// the last 4 bits - 0x000F
+    /// </summary>
     public byte N { get; }
+
+    /// <summary>
+    /// data & 0x0F00
+    /// </summary>
     public byte X { get; }
+
+    /// <summary>
+    /// data & 0x00F0
+    /// </summary>
     public byte Y { get; }
 }
