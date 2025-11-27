@@ -157,15 +157,9 @@ public static class Instructions
     // 0x2NNN
     public static void Call(State state, Interfaces interfaces, OpCode opCode)
     {
-        Push(state.Registers, state.Registers.PC);
+        state.Registers.Push(state.Registers.PC);
         state.Registers.PC = opCode.NNN;
     }
-
-    public static void Push(Registers registers, ushort value)
-   => registers.Stack[registers.SP++] = value;
-
-    private static ushort Pop(Registers registers)
-    => registers.Stack[--registers.SP];
 
     public static void ZeroOps(State state, Interfaces interfaces, OpCode opCode)
     {
@@ -175,7 +169,7 @@ public static class Instructions
                 state.VideoBuffer.Reset();
                 break;
             case 0xEE:
-                state.Registers.PC = Pop(state.Registers);
+                state.Registers.PC = state.Registers.Pop();
                 break;
             default:
                 throw new NotImplementedException($"instruction '0x0{opCode.NN:X}' not implemented");
