@@ -14,14 +14,14 @@ public record Memory
         set => _data[index] = value;
     }
 
-    public void Reset()
+    internal void Reset()
     {
         Array.Clear(_data);
         for (var i = 0; i != Font.Characters.Length; ++i)
             _data[i] = Font.Characters[i];
     }
 
-    public void LoadRom(System.IO.Stream romData)
+    internal void LoadRom(System.IO.Stream romData)
     {
         Reset();
 

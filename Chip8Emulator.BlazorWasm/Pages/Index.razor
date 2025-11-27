@@ -105,7 +105,7 @@
         }
 
         using var romData = await response.Content.ReadAsStreamAsync();
-        _state.Memory.LoadRom(romData);
+        _state.LoadRom(romData);
 
         _cpuTickTimer.Enabled = true;
     }
@@ -135,17 +135,13 @@
         _mainRenderContext.ImageSmoothingEnabled = false;
     }
 
-    private void OnMainCanvasResize(Size windowSize)
-    {
-        _canvasWidth = windowSize.Width;
-        _canvasHeight = windowSize.Height;
-    }
-
     private void OnMainCanvasFrameReady(float timestamp)
     {
         _mainRenderContext.ClearRect(0, 0, _canvasWidth, _canvasHeight);
         if (_offscreenCanvas != null)
-            _mainRenderContext.DrawImage(_offscreenCanvas.ElementReference, 0, 0, _canvasWidth, _canvasHeight);
+            _mainRenderContext.DrawImage(_offscreenCanvas.ElementReference,
+                0, 0, Chip8Emulator.Core.Constants.SCREEN_WIDTH, Chip8Emulator.Core.Constants.SCREEN_HEIGHT,
+                0, 0, _canvasWidth, _canvasHeight);
     }
 
     private async ValueTask OnOffscreenCanvasReady(CanvasBase canvas)
@@ -167,7 +163,6 @@
             Height = _canvasHeight,
             Hidden = false,
             OnCanvasReady = this.OnMainCanvasReady,
-            OnResize = this.OnMainCanvasResize,
             OnFrameReady = this.OnMainCanvasFrameReady,
             OnKeyDown = this.OnKeyDown,
             OnKeyUp = this.OnKeyUp
