@@ -176,7 +176,10 @@
             OnCanvasReadyAsync = this.OnOffscreenCanvasReady
         });
 
-        _interfaces = new(new LambdaRenderer(data => UpdateFrame(data)), new BlazorSoundPlayer(JsRuntime));
+        _interfaces = new(
+            new LambdaRenderer(data => UpdateFrame(data)),
+            new BlazorSoundPlayer(JsRuntime),
+            new Input());
         _state = new();
 
         _cpu = new Cpu(_interfaces);

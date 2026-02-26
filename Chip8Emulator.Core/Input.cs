@@ -3,7 +3,7 @@ using System;
 
 namespace Chip8Emulator.Core;
 
-public class Input
+public class Input : IInput
 {
     private readonly LRUCache<Keys, Keys> _pressedKeys = new((uint)Enum.GetValues<Keys>().Length);
 

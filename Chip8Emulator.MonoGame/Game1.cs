@@ -72,7 +72,10 @@ public class Game1 : Game
         _spriteBatch = new SpriteBatch(GraphicsDevice);
      
         _renderer = new TextureRenderer(this.GraphicsDevice);
-        _interfaces = new Interfaces(_renderer, new MonoGameSoundPlayer());
+        _interfaces = new Interfaces(
+            _renderer,
+            new MonoGameSoundPlayer(),
+            new Input());
         _cpu = new Cpu(_interfaces);
 
         _state = new();
